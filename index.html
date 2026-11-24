@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RealFarm</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1c3424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RealFarm">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: friendly kampung game for ages 13–50, short plain Malay
+   IDEA: a wooden signboard hanging over a sunny padi-green world
+   PICTURE: the 3D world itself, full screen
+   COLOUR and TYPE: deep leaf green panels, cream text, padi-yellow accent; Baloo 2
+   LAYOUT: status top-left, menu top-right, action buttons bottom-right, d-pad only in vehicles */
+:root{color-scheme:light dark;--panel:rgba(28,52,36,.9);--ink:#fff7e3;--acc:#ffd23f}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;overflow:hidden;background:#9fd8f0;font:16px/1.4 "Baloo 2",system-ui,sans-serif;color:var(--ink);-webkit-user-select:none;user-select:none;touch-action:none;-webkit-touch-callout:none}
+#game{position:fixed;inset:0}#game canvas{display:block}
+.panel{background:var(--panel);border:2px solid rgba(255,210,63,.35);border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#hud{position:fixed;left:10px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px;max-width:min(390px,calc(100vw - 80px))}
+#stat{padding:5px 12px;font-weight:700;display:flex;flex-wrap:wrap;gap:2px 12px}
+#stat b{color:var(--acc)}#stat .full{color:#ff8a80}
+#task{padding:6px 12px 7px;font-size:15px;cursor:pointer;border-color:rgba(255,210,63,.75)}
+#task .lbl{font-size:11.5px;letter-spacing:.6px;color:var(--acc);font-weight:700;display:flex;justify-content:space-between;gap:8px}#task .lbl i{font-style:normal;opacity:.8;letter-spacing:0;font-weight:500}
+#task b{display:block;font-size:16.5px;line-height:1.2}#task small{display:block;opacity:.92;font-size:13.5px;line-height:1.3;margin-top:2px}#task.tut{border-color:#ffd23f;box-shadow:0 0 0 2px rgba(255,210,63,.35)}
+#navB{padding:4px 6px 4px 12px;font-weight:700;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%}#navA{display:inline-block;font-size:22px;color:var(--acc);transition:transform .15s}#navB button{min-height:34px;min-width:34px;padding:0 8px}#task span{color:var(--acc);font-weight:700}
+#menu{position:fixed;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px}
+button{font:inherit;color:var(--ink);background:var(--panel);border:2px solid rgba(255,210,63,.45);border-radius:12px;min-height:44px;min-width:44px;padding:4px 12px;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+button:active,button.down{transform:scale(.94);filter:brightness(1.25)}
+button.pri{background:#e0a91c;color:#2b1d05;border-color:#ffe08a;font-weight:700}
+button.ok{background:#3f8f52;border-color:#9be3a9}
+button:disabled{opacity:.45;cursor:default}
+#toast{position:fixed;left:50%;top:44%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:5;width:max-content;max-width:90vw}
+#toast div{padding:5px 14px;animation:pop .25s ease-out;text-align:center}
+@keyframes pop{from{transform:translateY(-8px);opacity:0}}
+@media (prefers-reduced-motion:reduce){#toast div{animation:none}}
+#dpad{position:fixed;left:14px;bottom:max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(3,64px);gap:4px}
+#dpad button{font-size:24px;padding:0;border-radius:16px;background:rgba(28,52,36,.8);touch-action:none}
+#dpad [data-d=f]{grid-area:1/2}#dpad [data-d=l]{grid-area:2/1}#dpad [data-d=r]{grid-area:2/3}#dpad [data-d=b]{grid-area:3/2}
+#acts{position:fixed;right:14px;bottom:max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:auto auto;grid-template-areas:"x guna" "run guna" "veh veh";gap:8px;align-items:end;justify-items:end}
+#bUse{grid-area:guna;width:108px;height:108px;border-radius:50%;font-weight:700;font-size:15px;line-height:1.1;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+#bUse .ic{font-size:30px}
+#bRun{grid-area:run;width:76px;height:56px;font-weight:700}#bRun.on{background:#e0a91c;color:#2b1d05}
+#bClean{grid-area:x;width:76px;height:56px;font-weight:700}
+#bVeh{grid-area:veh;height:50px;font-weight:700;min-width:190px}
+#left{position:fixed;left:10px;bottom:max(14px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;align-items:flex-start;max-width:calc(100vw - 150px);pointer-events:none;z-index:4}
+#left.veh{bottom:calc(max(14px,env(safe-area-inset-bottom)) + 210px)}
+#cap{padding:8px 12px;font-size:14.5px;line-height:1.35;max-width:430px;pointer-events:auto;background:rgba(16,44,74,.93);border-color:rgba(125,190,255,.6)}#cap b{color:#9fd3ff}
+#cap .ch{font-size:11.5px;letter-spacing:.6px;color:#9fd3ff;font-weight:700;margin-bottom:2px}
+#cap .pb{height:7px;border-radius:4px;background:rgba(255,255,255,.2);margin-top:6px;overflow:hidden;width:180px;max-width:100%}#cap .pb i{display:block;height:100%;width:0;background:var(--acc)}
+#tray{display:flex;flex-wrap:wrap;gap:6px;pointer-events:auto}
+#left.wide{max-width:calc(100vw - 20px);bottom:calc(max(14px,env(safe-area-inset-bottom)) + 128px);z-index:6}
+#tray.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:min(640px,calc(100vw - 20px));max-height:calc(100vh - 290px);min-height:min(420px,calc(100vh - 290px));overflow:auto;padding:8px;border-radius:14px;background:rgba(28,52,36,.94);border:2px solid rgba(255,210,63,.35)}
+#left.wide #cap{display:none!important}
+#left.build{max-width:calc(100vw - 20px)}#tray.bar{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-height:58px;flex-shrink:0;align-items:center;max-width:calc(100vw - 20px);padding:6px;border-radius:14px;background:rgba(28,52,36,.9);touch-action:pan-x;-webkit-overflow-scrolling:touch}#tray.bar button{flex:none;white-space:nowrap}
+#tray.grid .hd{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:700;font-size:18px}
+@media(min-width:600px){#tray.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+#tray.grid .hd button{min-height:38px}
+#tray .sc{display:flex;flex-direction:column;align-items:stretch;text-align:left;padding:10px 12px;gap:4px;line-height:1.25;font-weight:500;font-size:15px;min-height:0;background:rgba(255,255,255,.06)}
+#tray .sc .t{font-size:18px;font-weight:700;display:flex;align-items:center;gap:6px;min-height:28px}
+#tray .sc .own{font-size:13.5px;opacity:.85;min-height:18px}
+#tray .sc .r{display:flex;justify-content:space-between;white-space:nowrap;gap:4px}#tray .sc .r b{font-weight:700}
+#tray .sc .g{color:#9be3a9;font-weight:700}
+#tray.grid .hd small{display:block;font-weight:500;font-size:14px;opacity:.85}
+#tray .sc .buy{margin-top:6px;text-align:center;border-radius:10px;background:#e0a91c;color:#2b1d05;font-weight:700;padding:8px 0;font-size:16px}
+#tray .sc.lock{opacity:.55}#tray .sc.lock .buy{background:rgba(255,255,255,.15);color:var(--ink)}
+#tray button{min-height:42px;font-size:14.5px;padding:4px 10px;font-weight:700;background:rgba(28,52,36,.92)}#tray button.pri{background:#e0a91c}
+.hide{display:none!important}
+#banner{position:fixed;left:10px;top:calc(max(10px,env(safe-area-inset-top)) + 76px);width:min(520px,calc(100vw - 80px));padding:8px 12px;z-index:6;text-align:center}
+body.bnr #task,body.bnr #navB,body.pnl #task{display:none}
+#banner h3{margin:0;color:var(--acc);font-size:20px;line-height:1.15}#banner p{margin:4px 0 8px;font-size:15px}
+#banner .r{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10;padding:12px}
+#modal.on{display:flex}
+#box{width:min(540px,100%);max-height:88vh;overflow:auto;padding:16px 16px;touch-action:pan-y}
+#box h2{margin:0 0 6px;font-size:25px;line-height:1.1;color:var(--acc)}
+#box h3{margin:14px 0 4px;font-size:18px}
+#box p{margin:4px 0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,247,227,.15)}
+.row .r{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.price{white-space:nowrap;color:var(--acc);font-weight:700}
+.note{font-size:13.5px;opacity:.9;margin-top:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08)}
+.opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.opts button{text-align:left;line-height:1.2;padding:8px 10px}
+.close{float:right;margin:-4px -6px 0 8px}
+.tabs{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap}
+.bar{height:10px;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:3px}.bar i{display:block;height:100%;background:#7bd389}
+.card{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.07);margin:6px 0}
+.card h4{margin:0 0 2px;font-size:17px}.card small{opacity:.85}
+.said{background:rgba(123,211,137,.16);border:1px solid rgba(123,211,137,.5)}
+.steps{display:flex;gap:6px;margin:6px 0}.steps i{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.18)}.steps i.d{background:var(--acc)}
+.meter{position:relative;height:46px;border-radius:12px;overflow:hidden;display:flex;margin:12px 0;border:2px solid rgba(255,247,227,.4)}
+.meter div{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+#needle{position:absolute;top:0;bottom:0;width:6px;margin-left:-3px;background:#fff;box-shadow:0 0 6px #000}
+.reel{display:flex;gap:14px;justify-content:center;align-items:stretch;margin:10px 0}
+#track{position:relative;width:78px;height:230px;border-radius:14px;background:linear-gradient(#2a6f96,#123a52);border:2px solid rgba(255,247,227,.4);overflow:hidden}
+#zone{position:absolute;left:4px;right:4px;border-radius:10px;background:rgba(124,214,92,.55);border:2px solid #b9f59a}
+#fishI{position:absolute;left:0;right:0;text-align:center;font-size:28px;line-height:30px;margin-bottom:-15px}
+#prog{position:relative;width:20px;border-radius:10px;background:rgba(255,255,255,.15);overflow:hidden}
+#progF{position:absolute;left:0;right:0;bottom:0;background:var(--acc)}
+.bigbtn{width:100%;min-height:60px;font-size:19px;font-weight:700}
+.bigtxt{font-size:22px;font-weight:700;text-align:center;margin:16px 0!important}
+.bite{animation:shake .15s infinite}@keyframes shake{50%{transform:translateX(4px)}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+ <div id="stat" class="panel">Memuatkan…</div>
+ <div id="task" class="panel" role="button" tabindex="0"><div id="taskT"></div></div>
+ <div id="navB" class="panel hide"><b id="navA">⬆</b> <span id="navT"></span> <button id="navX" aria-label="Hentikan navigasi">✕</button></div>
+</div>
+<div id="menu">
+ <button id="bHelp" aria-label="Bantuan">❓</button>
+ <button id="bFarm" aria-label="Ladang saya">📋</button>
+ <button id="bBag" aria-label="Beg">🎒</button>
+ <button id="bRec" aria-label="Rekod kewangan">📒</button>
+ <button id="bNav" aria-label="Navigasi">🧭</button>
+ <button id="bBuild" aria-label="Mod bina">🔨</button>
+</div>
+<div id="banner" class="panel hide"></div>
+<div id="toast"></div>
+<div id="dpad" class="hide">
+ <button data-d="f" aria-label="Minyak">▲</button><button data-d="l" aria-label="Kiri">◀</button>
+ <button data-d="r" aria-label="Kanan">▶</button><button data-d="b" aria-label="Brek / undur">▼</button>
+</div>
+<div id="acts">
+ <button id="bClean" class="hide">🧹 KEMAS</button>
+ <button id="bRun">🏃 LARI</button>
+ <button id="bUse" class="pri"><span class="ic">✋</span><span id="useL">GUNA</span></button>
+ <button id="bVeh" class="hide">🚲 NAIK</button>
+</div>
+<div id="left"><div id="cap" class="panel hide"></div><div id="tray"></div></div>
+<div id="modal"><div id="box" class="panel"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+addEventListener('error',e=>{try{const t=document.querySelector('#toast'),d=document.createElement('div');d.className='panel';d.style.background='#8e2424';d.textContent='⚠️ Ralat: '+(e.message||'tidak diketahui')+' — sila tangkap skrin & laporkan';t.appendChild(d);setTimeout(()=>d.remove(),8000)}catch(_){}});
+/* ================= DATA (anggaran pendidikan) ================= */
+const CROPS={
+ sawi:{n:'Sawi',d:2,seed:3,price:6.82,y:2,tier:0,real:'25–30 hari',dep:'0.5–1 cm',sp:'20 × 20 cm',tip:'Baja NPK sedikit di keliling pokok selepas ±10 hari.',col:0x6cbf4a},
+ kangkung:{n:'Kangkung',d:2,seed:2.5,price:6.79,y:2,tier:0,real:'21–30 hari',dep:'1–2 cm',sp:'15 × 15 cm',tip:'Kangkung suka tanah lembap. Bila dituai dengan potong pucuk, ia tumbuh semula.',col:0x4f9e3a},
+ bayam:{n:'Bayam',d:2,seed:3,price:6,y:1.5,tier:0,real:'25–35 hari',dep:'±0.5 cm',sp:'15 × 15 cm',tip:'Biji bayam sangat halus — gaul dengan pasir supaya tabur sekata.',col:0x3f8f3f},
+ cili:{n:'Cili',d:4,seed:6,price:16.55,y:1,tier:12,real:'75–90 hari',dep:'±0.5 cm',sp:'60 × 75 cm',tip:'Sungkupan plastik membantu kawal rumpai dan kekalkan lembapan.',col:0xd8322a},
+ tomato:{n:'Tomato',d:4,seed:5,price:8.14,y:3,tier:16,real:'70–80 hari',dep:'±0.5 cm',sp:'60 × 60 cm',tip:'Pasang junjung kayu supaya pokok tidak rebah bila berbuah.',col:0xe0482f},
+ timun:{n:'Timun',d:3,seed:4,price:5.52,y:3,tier:4,real:'35–45 hari',dep:'1–2 cm',sp:'50 × 60 cm',tip:'Pasang junjung/para. Tuai buah muda setiap 2 hari.',col:0x7cc243},
+ kacang:{n:'Kacang panjang',d:3,seed:4,price:8,y:2,tier:6,real:'45–55 hari',dep:'2–3 cm',sp:'30 × 90 cm',tip:'Kekacang menambah nitrogen ke tanah secara semula jadi.',col:0x8bc34a},
+ bawang:{n:'Daun bawang',d:3,seed:4,price:10,y:1.5,tier:8,real:'45–60 hari',dep:'ulas separuh tertanam',sp:'15 × 15 cm',tip:'Pastikan saliran baik — ulas mudah reput jika air bertakung.',col:0xb0587a},
+ terung:{n:'Terung',d:4,seed:5,price:9,y:3,tier:20,real:'60–70 hari',dep:'±0.5 cm',sp:'60 × 90 cm',tip:'Buang daun tua & buah rosak untuk kawal serangga.',col:0x6a3a8c}};
+const CIC={kangkung:'🥬',bayam:'🌿',sawi:'🥬',bawang:'🧅',kacang:'🫛',timun:'🥒',terung:'🍆',tomato:'🍅',cili:'🌶️'};
+const RIVER={Puyu:[3,'Murah'],Tilapia:[6,'Murah'],Lampam:[7,'Sederhana'],Keli:[5,'Sederhana'],Haruan:[14,'Mahal'],Patin:[20,'Mahal'],'Udang galah':[16,'Sangat mahal']};
+const POOL=[['Puyu',24],['Tilapia',24],['Lampam',18],['Keli',15],['Haruan',10],['Patin',6],['Udang galah',3]];
+const SPECIES={tilapia:{n:'Tilapia merah',d:8,kg:.4,price:12,seed:.25,real:'4–5 bulan'},keli:{n:'Keli',d:6,kg:.35,price:10.29,seed:.2,real:'3–4 bulan'},patin:{n:'Patin',d:12,kg:.8,price:20,seed:.3,real:'6–8 bulan'},udang:{n:'Udang galah',d:14,kg:.045,price:70,seed:.3,real:'4–6 bulan'}};
+const TYPES={
+ kebun:{n:'Kebun Sayur',ic:'🥬',diff:'Mudah',cost:80,wage:5,cap:[4,8,12],unit:'batas',store:[25,50,75],src:'DOA / MARDI',
+  desc:'Ketuk setiap batas untuk bersihkan, gembur, semai, siram dan tuai.',
+  steps:[{t:'Pasang pagar',say:'Anda memagar kawasan kebun supaya ayam, kambing dan babi hutan tidak merosakkan tanaman.'},
+   {t:'Uji pH tanah & tabur kapur',say:'Kit ujian menunjukkan pH 5.0 (berasid). Anda menabur kapur dolomit supaya pH naik ke 5.5–6.5 — julat terbaik untuk kebanyakan sayur.'},
+   {t:'Pasang tangki air',say:'Tangki air dipasang di tepi kebun supaya mudah menyiram setiap pagi dan petang.'}],
+  tips:['Siram waktu pagi atau petang, bukan tengah hari.','Giliran tanaman: jangan tanam sayur yang sama di batas sama berturut-turut.','Kawal rumpai awal — rumpai berebut baja dengan sayur.']},
+ ayam:{n:'Reban Ayam Telur',ic:'🐔',diff:'Mudah',cost:120,wage:4,cap:[10,20,30],unit:'ekor',store:[20,40,60],feed:.25,clean:'Kemas reban',src:'Jabatan Perkhidmatan Veterinar (DVS)',
+  desc:'Bela ayam penelur, beri makan setiap hari, kutip telur.',
+  steps:[{t:'Bina reban',say:'Reban dibina dengan lantai tinggi, dinding berjaring untuk pengudaraan dan ruang ±4–5 ekor setiap m². Udara baik = kurang penyakit.'},
+   {t:'Sediakan biosekuriti',say:'Bekas celup kaki berisi cecair nyahkuman diletak di pintu. Kasut dicelup setiap kali masuk supaya kuman tidak dibawa masuk.'},
+   {t:'Pasang bekas makanan & air',say:'Bekas makanan dan air minuman dipasang. Ayam mesti ada air bersih sepanjang hari. Ayam yang dibeli nanti sudah divaksin Newcastle (ND).'}],
+  feedSay:'Anda menabur ±110 g makanan untuk setiap ekor dan mengisi air bersih. Ayam yang cukup makan akan bertelur esok pagi.',
+  cleanSay:'Najis dibuang dan sekam baru ditabur. Ammonia daripada najis boleh menyebabkan penyakit pernafasan.',
+  buySay:'5 ekor ayam penelur umur ±20 minggu (sudah divaksin) dihantar ke reban.',
+  tips:['Air bersih mesti ada sepanjang hari.','Kutip telur sekurang-kurangnya 2 kali sehari supaya bersih.','Asingkan ayam yang nampak lesu atau tidak makan.']},
+ ikan:{n:'Sangkar Ikan',ic:'🐟',diff:'Sederhana',cost:200,wage:6,cap:[100,200,300],unit:'benih',store:[60,120,180],feed:.05,clean:'Bersih jaring',river:-21,sp:['tilapia','keli','patin'],src:'Jabatan Perikanan Malaysia',
+  desc:'Ternak tilapia merah, keli atau patin dalam sangkar di sungai depan rumah.',
+  steps:[{t:'Pilih lokasi sangkar',say:'Lokasi dipilih di sungai depan rumah: arus sederhana dan dalam lebih 2 m. Arus membawa oksigen dan membuang sisa.'},
+   {t:'Pasang rakit & jaring',say:'Rakit terapung (tong + kayu) dipasang dan jaring sangkar diikat kemas. Mata jaring kecil supaya benih tidak terlepas.'},
+   {t:'Bina titi & stor pelet',say:'Titi dibina dari tebing ke sangkar dan stor kecil disediakan supaya pelet kekal kering.'}],
+  feedSay:'Pelet ditabur sedikit demi sedikit (±3–5% berat badan ikan). Anda berhenti bila ikan tidak lagi berebut — sisa pelet merosakkan air.',
+  cleanSay:'Jaring sangkar diberus dan lumut dibuang supaya air sungai mengalir baik dan oksigen cukup.',
+  buySay:'Plastik benih direndam dalam air sungai 15–30 minit (aklimatisasi) supaya suhu sama, kemudian benih dilepas perlahan-lahan.',
+  tips:['Beri makan 2 kali sehari pada waktu yang sama.','Ikan terapung ternganga waktu pagi = oksigen rendah.','Elak beri makan sebelum hujan lebat — air jadi keruh.']},
+ udang:{n:'Kandang Udang Galah',ic:'🦐',diff:'Mencabar',cost:300,wage:8,cap:[200,400,600],unit:'benih',store:[15,30,45],feed:.03,clean:'Bersih jaring',river:-9,sp:['udang'],src:'Jabatan Perikanan Malaysia',
+  desc:'Hasil mahal tetapi perlu jaga rapi. Kandang jaring di sungai depan rumah.',
+  steps:[{t:'Pilih lokasi',say:'Bahagian sungai berarus perlahan dengan dasar lumpur berpasir dipilih. Udang galah perlukan air tawar yang bersih.'},
+   {t:'Pasang kandang jaring',say:'Jaring dipasang sehingga ke dasar sungai supaya udang tidak lari.'},
+   {t:'Letak tempat berlindung',say:'Pelepah kelapa dan paip PVC dimasukkan. Udang lemah semasa bersalin kulit dan perlu tempat sembunyi daripada udang lain (kanibal).'}],
+  feedSay:'Pelet udang ditabur di tepi kandang, lebih banyak waktu petang kerana udang galah aktif pada waktu malam.',
+  cleanSay:'Jaring dibersihkan dan tempat berlindung diperiksa supaya air mengalir baik.',
+  buySay:'Juvana udang galah diaklimatisasi 15–30 minit kemudian dilepas. Kepadatan ±5–10 ekor setiap m².',
+  tips:['Kepadatan terlalu tinggi = udang bergaduh dan lambat besar.','Udang galah aktif waktu malam.','Pastikan tempat berlindung cukup.']},
+ kambing:{n:'Kandang Kambing',ic:'🐐',diff:'Sederhana',cost:300,wage:6,cap:[3,6,10],unit:'ekor',store:[0,0,0],feed:2,clean:'Kemas kandang',src:'Jabatan Perkhidmatan Veterinar (DVS)',
+  buy:[{k:'d',n:'Kambing muda (Boer kacukan)',price:550}],mature:10,sell:1100,real:'8–12 bulan',
+  desc:'Bela kambing pedaging sehingga matang dan jual. Modal besar: ±RM550 seekor (harga pasaran).',
+  steps:[{t:'Bina kandang bertiang',say:'Kandang dibina ±1–1.5 m dari tanah dengan lantai papan berlubang supaya najis jatuh dan lantai kekal kering.'},
+   {t:'Tanam rumput Napier',say:'Rumput Napier ditanam di tepi kandang sebagai makanan utama. Kambing perlukan serat daripada rumput dan daun.'},
+   {t:'Pasang blok garam & air',say:'Blok garam galian dan bekas air bersih dipasang. Jadual ubat cacing setiap ±3 bulan dicatat.'}],
+  feedSay:'Rumput Napier yang dilayukan sedikit diberi bersama sedikit konsentrat. Rumput terlalu basah boleh menyebabkan kembung.',
+  cleanSay:'Najis di bawah kandang disodok dan lantai disapu. Najis kambing boleh dijadikan baja.',
+  buySay:'Kambing muda dihantar dan diberi ubat cacing sebelum masuk kandang.',
+  tips:['Sediakan blok garam galian.','Asingkan kambing sakit daripada kumpulan.','Potong kuku kambing secara berkala.']},
+ lembu:{n:'Kandang Lembu',ic:'🐄',diff:'Mencabar',cost:500,wage:10,cap:[2,4,6],unit:'ekor',store:[20,40,60],feed:5,clean:'Kemas kandang',src:'Jabatan Perkhidmatan Veterinar (DVS)',
+  buy:[{k:'d',n:'Anak lembu pedaging (KK)',price:2500},{k:'t',n:'Lembu tenusu (Jersey kacukan)',price:6000}],mature:14,sell:5000,real:'±18–24 bulan',
+  desc:'Lembu pedaging (±RM2,500 anak) atau tenusu (±RM6,000). Modal paling besar — sesuai bila ladang sudah maju.',
+  steps:[{t:'Bina kandang',say:'Kandang berbumbung dibina dengan lantai simen bercerun ke longkang supaya najis mudah dicuci.'},
+   {t:'Sediakan padang ragut',say:'Padang ragut dan rumput Napier disediakan. Lembu makan rumput ±10% berat badan sehari.'},
+   {t:'Rancang vaksin',say:'Jadual vaksin Hawar Berdarah (HS) dan ubat cacing dibuat mengikut program DVS.'}],
+  feedSay:'Rumput segar ±30 kg seekor dan air bersih diberi. Lembu minum 30–50 liter air sehari.',
+  cleanSay:'Lantai disiram dan najis disalirkan ke longkang. Kandang bersih = kurang lalat dan penyakit.',
+  buySay:'Lembu dihantar dengan lori dan diperiksa doktor haiwan sebelum masuk kandang.',
+  tips:['Lembu tenusu diperah 2 kali sehari pada waktu yang sama.','Sediakan air bersih sepanjang masa.','Rekod tarikh vaksin dan rawatan cacing.']}};
+const ORDER=['kebun','ayam','ikan','udang','kambing','lembu'];
+const BULAN=10;const GAJI_HELPER=300;const GAJI={kebun:120,ayam:100,ikan:150,udang:200,kambing:150,lembu:250};
+const MAHIR={kebun:20,ayam:12,ikan:12,udang:12,kambing:12,lembu:12};
+const HOWMAHIR={kebun:'tuai sendiri (gred A = 2 mata, gred B = 1)',ayam:'jaga sendiri setiap hari: beri makan & kemas (1 mata sehari)',ikan:'beri makan & bersih jaring sendiri setiap hari, tuai sangkar (+5)',udang:'beri makan & bersih jaring sendiri setiap hari, tuai (+5)',kambing:'beri makan & kemas sendiri setiap hari, jual ternakan matang (+5)',lembu:'beri makan & kemas sendiri setiap hari, jual ternakan matang (+5)'};
+const BED={semak:['🌿','Bersihkan semak','Anda mencabut rumpai dan membuang sampah. Rumpai berebut air dan baja dengan sayur, jadi tanah mesti bersih dahulu.'],
+ bersih:['⛏️','Gembur & bentuk batas','Anda mencangkul tanah sedalam ±15–20 cm, membentuk batas setinggi 15–30 cm dan menggaul baja organik (kompos). Tanah gembur membolehkan akar bernafas dan air mengalir keluar.']};
+const CL={
+ b_hijau:{c:'baju',n:'Baju Melayu hijau',p:0,col:0x2f8f5b},b_pink:{c:'baju',n:'T-shirt pink terang',p:20,col:0xff6fb0},
+ b_batik:{c:'baju',n:'Kemeja batik',p:45,tx:'batik'},b_jersi:{c:'baju',n:'Jersi kuning belang harimau',p:60,tx:'harimau'},b_hawaii:{c:'baju',n:'Kemeja Hawaii nanas 🍍',p:55,tx:'hawaii',fun:1},
+ s_biru:{c:'seluar',n:'Seluar jeans',p:0,col:0x2d3a55},s_oren:{c:'seluar',n:'Seluar oren pekerja',p:20,col:0xff8a1c},
+ s_pelikat:{c:'seluar',n:'Kain pelikat',p:25,tx:'kotak'},s_zebra:{c:'seluar',n:'Seluar belang zebra',p:35,tx:'zebra',fun:1},
+ t_caping:{c:'topi',n:'Caping',p:0},t_none:{c:'topi',n:'Tanpa topi',p:0},t_songkok:{c:'topi',n:'Songkok',p:30},t_koboi:{c:'topi',n:'Topi koboi',p:50},
+ t_tanjak:{c:'topi',n:'Tanjak emas',p:80},t_durian:{c:'topi',n:'Topi durian berduri',p:70,fun:1},t_ayam:{c:'topi',n:'Topi kepala ayam',p:65,fun:1},
+ a_none:{c:'aks',n:'Tiada aksesori',p:0},a_hitam:{c:'aks',n:'Cermin mata hitam',p:25},a_bintang:{c:'aks',n:'Cermin mata bintang ⭐',p:40,fun:1},
+ a_misai:{c:'aks',n:'Misai palsu tebal',p:15,fun:1},a_cape:{c:'aks',n:'Jubah superhero merah',p:90,fun:1}};
+const CATS={baju:'👕 Baju',seluar:'👖 Seluar',topi:'🎩 Topi',aks:'🕶️ Aksesori'};
+const RAGA=[{n:'Raga kecil',cap:20},{n:'Raga sederhana',cap:35,price:40},{n:'Raga besar',cap:50,price:90},{n:'Raga berganda + pemegang belakang',cap:70,price:160}];
+const VSHOP={moto:{n:'Basikal + raga',price:80,cap:20,ic:'🚲'},car:{n:'Pickup',price:1500,cap:150,ic:'🛻'}};
+const BEGS=[{cap:15,n:'Beg asal'},{cap:25,n:'Beg galas besar',price:60},{cap:40,n:'Beg rotan berganda',price:150}];let BEGCAP=15;
+const WEA=[['☀️','Cerah'],['⛅','Mendung'],['🌧️','Hujan']];
+const NOTE=src=>'<div class="note">ℹ️ Nilai teknikal & SOP ialah anggaran untuk pendidikan berdasarkan panduan umum '+(src||'DOA / MARDI / DVS / Jabatan Perikanan')+'. Masa dalam permainan dipendekkan. Harga pasaran berdasarkan purata runcit KPDN PriceCatcher (Nov 2026) dan laporan akhbar — harga sebenar berubah ikut tempat & musim.</div>';
+const nameOf=k=>{const[a,b,c]=k.split('_');
+ if(a==='benih')return'Benih '+CROPS[b].n;if(a==='hasil')return CROPS[b].n+' gred '+c+' (kg)';if(a==='ikan')return'Ikan sungai: '+b;if(a==='kg')return SPECIES[b].n+' (kg)';if(a==='buah')return FRUIT[b].item;
+ return({telur:'Telur ayam (biji)',susu:'Susu lembu (liter)'})[k]||k};
+const priceOf=k=>{const[a,b,c]=k.split('_');
+ if(a==='hasil')return Math.round(CROPS[b].price*(c==='A'?1:.8)*100)/100;if(a==='ikan')return(RIVER[b]||[5])[0];if(a==='kg')return SPECIES[b].price;if(a==='buah')return FRUIT[b].price;
+ return({telur:.48,susu:8})[k]||0};
+const FRUIT={pisang:{item:'Pisang (sikat)',price:5,every:3,n:1,max:3},rambutan:{item:'Rambutan (ikat)',price:6,every:4,n:2,max:6},kelapa:{item:'Kelapa (biji)',price:2.5,every:2,n:2,max:6}};
+const WT=k=>k==='telur'?.1:k==='susu'?.5:k.startsWith('benih_')?0:1;
+const load=o=>Math.round(Object.keys(o).reduce((a,k)=>a+WT(k)*o[k],0)*10)/10;
+
+/* ================= STATE ================= */
+const SAVE='kfs_v4';
+const fresh=()=>({jimat:0,day:1,min:7*60,money:500,weather:0,inv:{benih_kangkung:4,benih_sawi:2},ents:[],log:[],xp:0,lvl:1,kayu:0,cut:{t:[],b:[]},decor:[],skill:{},bulk:false,house:0,cat:'asal',hstore:{},helper:false,helperOwed:0,tut:0,beg:0,
+ veh:{moto:{own:false,cargo:{},pos:null},car:{own:false,cargo:{},pos:null}},
+ wear:{baju:'b_hijau',seluar:'s_biru',topi:'t_caping',aks:'a_none'},owned:['b_hijau','s_biru','t_caping','t_none','a_none']});
+let S=fresh();
+try{const t=localStorage.getItem(SAVE);if(t){const o=JSON.parse(t);S=Object.assign(fresh(),o);if(o.tut===undefined)S.tut=99}}catch(e){}
+BEGCAP=BEGS[S.beg||0].cap;
+const save=()=>{VEH.forEach(v=>{S.veh[v.id].pos=[v.g.position.x,v.g.position.z,v.h]});try{localStorage.setItem(SAVE,JSON.stringify(S))}catch(e){}};
+const put=(o,k,n)=>{o[k]=Math.round(((o[k]||0)+n)*10)/10;if(o[k]<=0)delete o[k]};
+/* masukkan sebanyak muat; pulangkan kuantiti yang masuk */
+const fit=(o,cap,k,n)=>{const w=WT(k);if(!w){put(o,k,n);return n}let q=Math.min(n,Math.floor((cap-load(o))/w*10)/10);if(k==='telur'||k.startsWith('ikan_'))q=Math.floor(q);q=Math.max(0,q);if(q>0)put(o,k,q);return q};
+const pay=(amt,what)=>{S.money=Math.round((S.money+amt)*10)/10;S.log.unshift({d:S.day,t:what,a:Math.round(amt*10)/10});S.log.length=Math.min(S.log.length,80)};
+const toast=t=>{const d=document.createElement('div');d.className='panel';d.textContent=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),2800)};
+const gainXP=n=>{S.xp+=n;const need=S.lvl*50;if(S.xp>=need){S.xp-=need;S.lvl++;toast('⭐ Naik tahap! Pengurus Ladang Tahap '+S.lvl)}};
+const isMahir=t=>(S.skill[t]||0)>=MAHIR[t];
+const skillTag=t=>{const v=Math.min(S.skill[t]||0,MAHIR[t]);return isMahir(t)?'🎓 Mahir':v>=MAHIR[t]/2?'📗 Belajar '+v+'/'+MAHIR[t]:'🌱 Pemula '+v+'/'+MAHIR[t]};
+function addSkill(t,n){const was=isMahir(t),old=S.skill[t]||0;S.skill[t]=old+n;if(t==='kebun')Object.keys(CROPS).forEach(c=>{if(CROPS[c].tier>old&&CROPS[c].tier<=S.skill[t]){toast('🔓 Benih baru: '+CROPS[c].n+'!');setTimeout(()=>say('🔓 <b>Benih '+CROPS[c].n+' kini dijual</b> di gerai Mak Cik Siti. Harga benih '+rm(CROPS[c].seed)+', hasil '+rm(CROPS[c].price*3)+' sebatas — lebih untung!',9),2500)}});if(!was&&isMahir(t)){toast('🎓 Anda kini MAHIR: '+TYPES[t].n+'!');setTimeout(()=>say('🎓 <b>Tahniah! Anda kini Mahir dalam '+TYPES[t].n+'.</b><br>Anda sudah faham SOP dan kerja harian. Kini boleh <b>upah pekerja</b> untuk projek ini di Kedai Pertanian (pekan). Gaji dibayar setiap hujung bulan.',12),1200)}}
+const bulan=()=>Math.floor((S.day-1)/BULAN)+1;
+const hour=()=>(S.min/60)%24;
+const clock=()=>{const m=Math.floor(S.min)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0')};
+const rm=v=>'RM '+(+v).toFixed(2);const rmS=v=>'RM'+(Math.round(v*100)%100?(+v).toFixed(2):Math.round(v));
+
+/* ================= THREE ================= */
+const R=new THREE.WebGLRenderer({antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+$('#game').appendChild(R.domElement);
+const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x9fd8f0,70,150);
+const cam=new THREE.PerspectiveCamera(40,1,.1,320);
+const hemi=new THREE.HemisphereLight(0xe8f6ff,0x56743a,.7);
+const sun=new THREE.DirectionalLight(0xfff0d0,.9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-35,right:35,top:35,bottom:-35,far:160});sun.shadow.camera.updateProjectionMatrix();
+scene.add(hemi,sun,sun.target);
+const matCache={};const M=c=>matCache[c]||(matCache[c]=new THREE.MeshLambertMaterial({color:c}));
+function mesh(g,m,x,y,z,p){const o=new THREE.Mesh(g,typeof m==='number'?M(m):m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;(p||scene).add(o);return o}
+const box=(w,h,d,m,x,y,z,p)=>mesh(new THREE.BoxGeometry(w,h,d),m,x,y,z,p);
+const cyl=(a,b,h,m,x,y,z,p,s=8)=>mesh(new THREE.CylinderGeometry(a,b,h,s),m,x,y,z,p);
+const ball=(r,m,x,y,z,p)=>mesh(new THREE.SphereGeometry(r,8,6),m,x,y,z,p);
+const cone=(r,h,m,x,y,z,p,s=6)=>mesh(new THREE.ConeGeometry(r,h,s),m,x,y,z,p);
+const grp=(x,z,p)=>{const g=new THREE.Group();g.position.set(x,0,z);(p||scene).add(g);return g};
+const clearG=g=>{while(g.children.length)g.remove(g.children[0])};
+function tex(w,h,draw,rx=1,ry=1){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+ const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
+const noise=(base,dots,n)=>(g,w,h)=>{g.fillStyle=base;g.fillRect(0,0,w,h);for(let i=0;i<n;i++){g.fillStyle=dots[i%dots.length];g.fillRect(Math.random()*w,Math.random()*h,2,2+Math.random()*3)}};
+const grassT=tex(128,128,noise('#79b54a',['#6aa63f','#8cc45a','#5f9a38'],900),100,40);
+const roadT=tex(64,64,noise('#4a4d52',['#55585e','#3f4246'],300),60,2);
+const paveT=tex(64,64,(g,w,h)=>{g.fillStyle='#c9c2b3';g.fillRect(0,0,w,h);g.strokeStyle='#a89f8e';g.lineWidth=2;for(let i=0;i<=w;i+=16){g.strokeRect(i,0,16,h/2);g.strokeRect(i-8,h/2,16,h/2)}});
+const roofT=tex(64,64,(g,w,h)=>{g.fillStyle='#b8452a';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=10)for(let x=-8+(y/10%2)*8;x<w;x+=16){g.fillStyle='#d2583a';g.beginPath();g.arc(x+8,y,8,0,Math.PI);g.fill();g.strokeStyle='#8f3320';g.stroke()}},3,3);
+const waterT=tex(128,128,(g,w,h)=>{g.fillStyle='#3d8fb5';g.fillRect(0,0,w,h);g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=2;for(let i=0;i<14;i++){const x=Math.random()*w,y=Math.random()*h;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+8,y-4,x+16,y);g.stroke()}},30,1);
+const woodT=tex(64,64,(g,w,h)=>{g.fillStyle='#9a6435';g.fillRect(0,0,w,h);g.fillStyle='#7d4f28';for(let x=0;x<w;x+=11)g.fillRect(x,0,2,h)},2,1);
+const soilC={semak:0x7a6a3a,bersih:0x8a5a33,gembur:0x6b4226,wet:0x4e3019};
+const signT=(txt,bg,fg)=>tex(256,64,(g,w,h)=>{g.fillStyle=bg;g.fillRect(0,0,w,h);g.fillStyle=fg;g.font='bold 28px "Baloo 2",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(txt,w/2,h/2+2)});
+const lamb=t=>new THREE.MeshLambertMaterial({map:t});
+const winMat=new THREE.MeshLambertMaterial({color:0x3b4a5a,emissive:0xffc860,emissiveIntensity:0});
+const glass=new THREE.MeshLambertMaterial({color:0x9fc8e0,transparent:true,opacity:.25});
+const netMat=new THREE.MeshLambertMaterial({color:0xcfd6da,transparent:true,opacity:.35});
+const TX={
+ batik:tex(64,64,(g,w,h)=>{g.fillStyle='#7a2f1f';g.fillRect(0,0,w,h);g.strokeStyle='#f2c46b';g.lineWidth=3;for(let i=0;i<5;i++){g.beginPath();g.arc(Math.random()*w,Math.random()*h,8+Math.random()*6,0,5);g.stroke()}}),
+ harimau:tex(64,64,(g,w,h)=>{g.fillStyle='#ffc61a';g.fillRect(0,0,w,h);g.fillStyle='#111';for(let y=4;y<h;y+=14){g.beginPath();g.moveTo(0,y);g.lineTo(w,y+6);g.lineTo(w,y+10);g.lineTo(0,y+5);g.fill()}}),
+ hawaii:tex(64,64,(g,w,h)=>{g.fillStyle='#1fa3c9';g.fillRect(0,0,w,h);for(let i=0;i<7;i++){const x=Math.random()*w,y=Math.random()*h;g.fillStyle='#ffd23f';g.beginPath();g.ellipse(x,y,4,6,0,0,7);g.fill();g.fillStyle='#2e8b57';g.fillRect(x-1,y-10,2,5)}}),
+ kotak:tex(64,64,(g,w,h)=>{g.fillStyle='#3b2a6b';g.fillRect(0,0,w,h);g.fillStyle='rgba(200,40,60,.6)';for(let i=0;i<w;i+=16){g.fillRect(i,0,6,h);g.fillRect(0,i,w,6)}}),
+ zebra:tex(64,64,(g,w,h)=>{g.fillStyle='#fff';g.fillRect(0,0,w,h);g.fillStyle='#111';for(let x=0;x<w;x+=12){g.beginPath();g.moveTo(x,0);g.lineTo(x+6,0);g.lineTo(x+2,h);g.lineTo(x-4,h);g.fill()}})};
+function iconTex(s){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='rgba(28,52,36,.9)';g.beginPath();g.arc(32,32,30,0,7);g.fill();g.strokeStyle='#ffd23f';g.lineWidth=3;g.stroke();g.font='36px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(s,32,35);return new THREE.CanvasTexture(c)}
+const ICON={};const iconMat=s=>ICON[s]||(ICON[s]=new THREE.SpriteMaterial({map:iconTex(s),depthTest:false}));
+
+/* ================= DUNIA ================= */
+const WX=175;
+const ground=mesh(new THREE.PlaneGeometry(WX*2+20,150),lamb(grassT),0,0,-5);ground.rotation.x=-Math.PI/2;ground.castShadow=false;
+const solid=[],PATHS=[];const block=(x,z,w,d)=>{const b={x,z,w,d};solid.push(b);return b};
+box(WX*2+20,.06,6,lamb(roadT),0,.03,-34).castShadow=false;PATHS.push({x:0,z:-34,w:WX+10,d:3.2});
+for(let x=-WX;x<WX;x+=4)box(2,.07,.18,0xf2d14b,x,.05,-34).castShadow=false;
+const water=mesh(new THREE.PlaneGeometry(WX*2+20,6),new THREE.MeshLambertMaterial({map:waterT,transparent:true,opacity:.92}),0,.04,34);water.rotation.x=-Math.PI/2;water.castShadow=false;
+box(WX*2+20,.05,1.2,0xd9c48f,0,.02,30.6).castShadow=false;box(WX*2+20,.05,1.2,0xd9c48f,0,.02,37.6).castShadow=false;
+const pave=(x,z,w,d)=>{const t=paveT.clone();t.needsUpdate=true;t.repeat.set(w/2,d/2);box(w,.05,d,lamb(t),x,.025,z).castShadow=false;PATHS.push({x,z,w:w/2,d:d/2})};
+pave(-4,-12,3,40);pave(-10,4,12,2.2);pave(4,-3.5,13,2.2);pave(-15,20,3,20);
+function gable(x,y,z,w,d,mat,p){for(const s of[-1,1]){const b=box(w*.58,.16,d,mat,x+s*w*.24,y,z,p);b.rotation.z=-s*.55}
+ const tri=new THREE.Shape();tri.moveTo(-w/2,0);tri.lineTo(w/2,0);tri.lineTo(0,w*.28);
+ for(const s of[-1,1])mesh(new THREE.ShapeGeometry(tri),new THREE.MeshLambertMaterial({color:0xe9dcc0,side:THREE.DoubleSide}),x,y-w*.16,z+s*(d/2-.25),p)}
+const HOME={x:-15,z:9.6};
+const HOUSES=[{n:'Rumah Pusaka',w:7,d:5.4,price:0,store:0},{n:'Rumah Kayu Baik Pulih',w:7,d:5.4,price:800,store:40,ver:1},{n:'Rumah Kampung Besar',w:9,d:6,price:2500,store:80,ver:1,wing:1},{n:'Banglo Kampung 2 Tingkat',w:9,d:6,price:6000,store:150,ver:1,two:1}];
+const CAT={asal:['Kayu asli',null,0],hijau:['Hijau pandan',0x9fd8a0,50],biru:['Biru langit',0x9cc8ec,50],kuning:['Kuning padi',0xffe08a,50],pink:['Merah jambu',0xffb3c7,50],putih:['Putih susu',0xf4f1ea,50]};
+let HOUSEG=null;const houseBlock=block(-15,4,3.7,3);
+function buildHouse(){if(HOUSEG)scene.remove(HOUSEG);const L=S.house||0,D=HOUSES[L],tint=CAT[S.cat||'asal'][1];
+ const wall=new THREE.MeshLambertMaterial({map:woodT,color:tint||0xffffff}),front=6.7,bodyF=front-(D.ver?1.7:0),cz=bodyF-D.d/2,H=HOUSEG=grp(-15,0);
+ const base=D.two?0:1.4;
+ if(!D.two){for(let sx=-D.w/2+.5;sx<=D.w/2-.4;sx+=2)for(const sz of[-D.d/2+.3,0,D.d/2-.3])cyl(.15,.15,1.4,0x5a3a20,sx,.7,cz+sz,H);
+  box(D.w+.2,.2,D.d+.2,0x8b5a2b,0,1.45,cz,H);if(D.ver)box(D.w*.7,.2,1.8,0x8b5a2b,0,1.45,bodyF+.85,H)}
+ else{box(D.w,3,D.d,new THREE.MeshLambertMaterial({color:tint||0xf1e9d8}),0,1.5,cz,H);box(D.w*.7,.2,1.8,0xc9c2b3,0,.1,bodyF+.85,H);
+  for(const wx of[-D.w/3,D.w/3])box(1.4,1.2,.08,winMat,wx,1.6,bodyF+.02,H)}
+ const wy=D.two?4.4:base+1.45,wh=2.6;box(D.w,wh,D.d,wall,0,wy,cz,H);
+ for(const wx of D.w>8?[-3,-1.2,3]:[-2.4,2.4])box(1.2,1,.08,winMat,wx,wy+.15,bodyF+.02,H);
+ box(1.1,2,.1,0x5a3a20,D.w>8?1.1:0,(D.two?0:base)+1.1+(D.two?0:.1),bodyF+.02,H);
+ if(D.ver){const vy=D.two?3.1:1.55;for(const sx of[-D.w*.35,D.w*.35]){cyl(.08,.08,1.9,0x6b4423,sx,vy+.95,front-.1,H)}box(D.w*.7,.12,.08,0xe9dcc0,0,vy+.7,front-.1,H);
+  const r=box(D.w*.75,.1,2,lamb(roofT),0,vy+2,bodyF+.9,H);r.rotation.x=.18;if(D.two)box(D.w*.7,.15,1.8,0x8b5a2b,0,3.05,bodyF+.85,H)}
+ if(D.wing){box(3,2.4,3.2,wall,D.w/2+1.4,base+1.2,cz,H);gable(D.w/2+1.4,base+3.1,cz,3.6,3.8,lamb(roofT),H)}
+ gable(0,wy+wh/2+.55+D.w*.02,cz,D.w+1.4,D.d+1.2,lamb(roofT),H);
+ if(!D.two)for(let i=0;i<4;i++)box(1.4,.12,.45,0x7a4a26,0,1.2-i*.32,front+.4+i*.4,H);
+ const ww=D.w/2+(D.wing?2.9:0)+.2;houseBlock.x=-15+(D.wing?1.4:0);houseBlock.w=ww-(D.wing?1.4:0);houseBlock.z=(cz-D.d/2+front)/2;houseBlock.d=(front-(cz-D.d/2))/2}
+buildHouse();
+{const B=grp(-15,-9);box(6,3.4,6,0xa63a2c,0,1.7,0,B);box(2.4,2.6,.1,0xf2e8d0,0,1.3,3.02,B);gable(0,3.9,0,6.8,6.8,0x5b3a2a,B);block(-15,-9,3.1,3.1)}
+const awnT=tex(64,32,(g,w,h)=>{for(let i=0;i<8;i++){g.fillStyle=i%2?'#fff3d6':'#2e8b57';g.fillRect(i*8,0,8,h)}});
+{const G=grp(4,-7);for(const sx of[-2.4,2.4])for(const sz of[-1,1])cyl(.1,.1,2.6,0x6b4423,sx,1.3,sz,G);
+ box(5,.9,1.6,0x9a6435,0,.45,.4,G);const a=box(5.6,.12,2.8,lamb(awnT),0,2.7,0,G);a.rotation.x=.12;
+ [0x6cbf4a,0xd8322a,0x6a3a8c,0xe0a91c].forEach((c,i)=>{cyl(.35,.28,.25,0xc8a064,-1.8+i*1.2,1,.5,G);ball(.28,c,-1.8+i*1.2,1.2,.5,G)});
+ box(2.6,.6,.08,lamb(signT('Gerai Mak Cik Siti','#2e8b57','#fff')),0,3.2,1.3,G).castShadow=false;block(4,-6.7,2.7,1.1)}
+function person(x,z,shirt,headwear,p){const P=grp(x,z,p);
+ const legs=box(.42,.7,.28,0x2d3a55,0,.35,0,P),body=box(.6,.75,.36,shirt,0,1.05,0,P);ball(.25,0xc68e5f,0,1.65,0,P);
+ if(headwear==='caping')cyl(.02,.55,.28,0xe2c46e,0,1.92,0,P,10);else if(headwear)ball(.28,headwear,0,1.7,-.03,P).scale.set(1,1.05,1.1);
+ P.userData={legs,body};return P}
+const siti=person(4,-8.2,0xd3557a,0xb23a6a);
+// PEKAN (jauh ke timur, sepanjang jalan raya)
+const PEKAN=118,PZ=-45;
+function shop(x,label,bg,wall){const K=grp(x,PZ);box(7,5.4,6,wall,0,2.7,0,K);box(7.4,.3,6.4,0x8a8a8a,0,5.5,0,K);
+ box(7,.25,2,0xd9d3c3,0,2.6,3.9,K);for(const px of[-3.3,0,3.3])cyl(.15,.15,2.6,0xefe8d8,px,1.3,4.7,K);
+ box(2,1.9,.1,0x3b2a1a,0,.95,3.02,K);for(const wx of[-2.2,2.2])box(1.4,1.1,.08,winMat,wx,1.2,3.02,K);
+ for(const wx of[-2,0,2])box(1.1,1,.08,winMat,wx,4,3.02,K);
+ box(5,.8,.1,lamb(signT(label,bg,'#fff')),0,3.2,4.95,K).castShadow=false;block(x,PZ,3.6,3.2);return K}
+pave(PEKAN,-38.6,74,2.6);
+const SHOPS=[['Kedai Runcit','#a33b2c',0xe8d9a8,'runcit'],['Kontraktor Rumah','#6d4c41',0xf5e6d3,'rumah'],['Kedai Pertanian','#2e7d32',0xf2ecd2,'agri'],['Klinik Veterinar','#1f6fb2',0xffffff,'vet'],['Butik Ceria','#c2185b',0xffe0ef,'butik'],['Kedai Kenderaan','#37474f',0xd7dde0,'motor'],['Kedai Kopi','#3a5a8c',0xbfe0d0,null]];
+const SHOPX={};SHOPS.forEach(([n,bg,wall,id],i)=>{const x=PEKAN-30+i*10;shop(x,n,bg,wall);if(id)SHOPX[id]=x;person(x,PZ+4.6,[0xa33b2c,0x6d4c41,0x2e7d32,0xf4f4f4,0xc2185b,0x37474f,0x8a5a2b][i],null)});
+{const K=grp(SHOPX.motor+3.5,-39.5);const m=grp(0,0,K);box(.32,.35,1.3,0xc62828,0,.65,0,m);for(const oz of[-.6,.6]){const w=cyl(.32,.32,.12,0x1b1b1b,0,.32,oz,m,12);w.rotation.z=Math.PI/2}m.rotation.y=.5}
+{const d=person(-2.2,4.2,0xff6fb0,0xffd23f);d.position.set(SHOPX.butik-2.2,0,PZ+4.2)}
+// PASAR BORONG (jauh ke barat)
+const BORONG=-112;
+const MKT={basah:BORONG-9,kering:BORONG+9};
+function shed(x,label,bg,roof,goods){const P=grp(x,PZ+1);for(const sx of[-4,4])for(const sz of[-2.5,2.5])cyl(.15,.15,3.2,0x777d84,sx,1.6,sz,P);
+ const r=box(9,.15,6,roof,0,3.3,0,P);r.rotation.x=.08;goods.forEach((c,i)=>{box(1.1,.7,1.1,0x9a6435,-3.2+i*1.6,.35,-1.2,P);ball(.3,c,-3.2+i*1.6,.85,-1.2,P)});
+ box(5,.9,.1,lamb(signT(label,bg,'#fff')),0,3.9,3,P).castShadow=false;block(x,PZ,4.2,1.6)}
+shed(MKT.basah,'Pasar Basah','#1565c0',0x4f7f9f,[0x9fb7c9,0xe08a6a,0xf6ead2,0xffffff,0x9fb7c9]);person(MKT.basah,PZ+3.4,0x1565c0,0xffffff);
+shed(MKT.kering,'Pasar Kering','#8d6e1f',0x9a7b3a,[0x6cbf4a,0xd8322a,0x6a3a8c,0xe0a91c,0x8b5a2b]);person(MKT.kering,PZ+3.4,0x8d6e1f,0x222222);
+{const G=grp(BORONG,PZ+2);for(const sx of[-1.6,1.6])cyl(.08,.08,2.4,0x6b4423,sx,1.2,1.2,G);const a=box(3.6,.1,2.4,lamb(awnT),0,2.4,.4,G);a.rotation.x=.1;box(3,.8,1,0x9a6435,0,.4,.8,G);
+ [0xffc61a,0x7cc243,0xd62828].forEach((c,i)=>ball(.25,c,-1+i,1,.8,G));box(2.6,.55,.06,lamb(signT('Gerai Buah','#e65100','#fff')),0,2.9,1.6,G).castShadow=false;block(BORONG,PZ+2.8,1.6,.6);person(BORONG,PZ+4.2,0xe65100,null)}
+{const G=grp(BORONG-19,PZ+1.5);for(const sx of[-2,2])cyl(.1,.1,2.8,0x6b4423,sx,1.4,0,G);const a=box(4.6,.1,3,0xc62828,0,2.8,.5,G);a.rotation.x=.1;
+ for(const sx of[-1,1]){cyl(.5,.5,.08,0xf2e8d0,sx,.75,1.4,G,10);cyl(.06,.06,.75,0x555555,sx,.37,1.4,G)}box(3.2,.55,.06,lamb(signT('Gerai Makan','#c62828','#fff')),0,3.3,1.9,G).castShadow=false;block(BORONG-19,PZ+1.5,2.2,.6)}
+pave(BORONG,-38.6,44,2.6);
+// papan tanda simpang
+function signpost(x,z,txt,bg,rot){const g=grp(x,z);cyl(.06,.06,2.4,0x6b4423,0,1.2,0,g);const b=box(2.8,.6,.06,lamb(signT(txt,bg,'#fff')),0,2.1,0,g);b.castShadow=false;g.rotation.y=rot||0}
+signpost(-1.5,-30.4,'Pekan  ➜','#2e7d32');signpost(-6.5,-30.4,'⬅  Pasar Borong','#455a64');
+for(let x=26;x<PEKAN-34;x+=30)signpost(x,-30.6,'Pekan '+Math.round(PEKAN-x)+'m ➜','#2e7d32');
+for(let x=-34;x>BORONG+24;x-=30)signpost(x,-30.6,'⬅ Pasar Borong '+Math.round(x-BORONG)+'m','#455a64');
+// PENANDA TERAPUNG atas tempat penting
+const MARK=[];function mark(x,z,ic,h){const sp=new THREE.Sprite(iconMat(ic));sp.scale.set(2.6,2.6,1);sp.position.set(x,h||8.5,z);sp.renderOrder=8;scene.add(sp);MARK.push(sp)}
+SHOPS.forEach(([n,,,id])=>{const ic={runcit:'🛒',rumah:'🏠',agri:'🧑‍🌾',vet:'🩺',butik:'👕',motor:'🚲'}[id];if(ic)mark(SHOPX[id],PZ,ic)});
+mark(MKT.basah,PZ,'🐟');mark(MKT.kering,PZ,'🥬');mark(4,-7,'🧺',5.5);
+// POKOK (dijana dengan benih tetap supaya pokok yang ditebang kekal ditebang)
+let _sd=20261123;const RND=()=>{_sd=(_sd*16807)%2147483647;return(_sd-1)/2147483646};
+const TREES=[];const regTree=(T,x,z,b,kind)=>{const id=TREES.length;T.userData.tid=id;TREES.push({id,g:T,b,x,z,kind,cut:false})};
+function tree(x,z,s=1){const T=grp(x,z);cyl(.18*s,.25*s,1.6*s,0x6b4423,0,.8*s,0,T);
+ const l=new THREE.MeshLambertMaterial({color:[0x3f8f3a,0x4f9f3f,0x2f7a33][Math.floor(RND()*3)],flatShading:true});
+ ball(1.1*s,l,0,2.2*s,0,T);ball(.8*s,l,.5*s,2.8*s,.2*s,T);regTree(T,x,z,block(x,z,.4,.4),'pokok')}
+function coconutG(T,lean){let px=0,py=0;
+ for(let i=0;i<6;i++){const s=cyl(.13,.16,.9,0x8a6a45,px,py+.45,0,T);s.rotation.z=lean*i*.15;px-=Math.sin(lean*i*.15)*.9;py+=.88}
+ for(let i=0;i<7;i++){const a=i/7*Math.PI*2,f=box(2.2,.04,.4,0x4c9a2a,px+Math.cos(a)*1,py+.1,Math.sin(a)*1,T);f.rotation.y=-a;f.rotation.z=-.35}
+ for(let i=0;i<3;i++)ball(.16,0x7a5a1a,px+Math.cos(i*2)*.25,py-.15,Math.sin(i*2)*.25,T)}
+function coconut(x,z){const T=grp(x,z);coconutG(T,(RND()-.5)*.5);regTree(T,x,z,block(x,z,.3,.3),'kelapa')}
+[[-24,-6],[-26,20],[-8,24],[24,-6],[33,8],[25,-14],[-28,-16],[14,-12],[33,22],[-36,4],[12,25]].forEach(([x,z])=>tree(x,z,.9+RND()*.4));
+for(let i=0;i<34;i++){const x=RND()*96-48,z=RND()*50-24;if(Math.abs(x+15)<8&&Math.abs(z-3)<9||Math.abs(x+4)<3&&z<9||Math.abs(x-4)<6&&Math.abs(z+6)<4||Math.abs(x+15)<3&&z>9||Math.abs(x+15)<5&&Math.abs(z+9)<5||Math.abs(x+8)<3&&Math.abs(z+9)<10)continue;tree(x,z,.8+RND()*.5)}
+for(let x=-WX+5;x<WX;x+=9){if(Math.abs(x+15)<14){RND();RND();continue}tree(x+RND()*3,-28.5+RND()*-1,.8+RND()*.4);if(RND()<.5&&Math.abs(x-PEKAN)>36&&Math.abs(x-BORONG)>26)tree(x+4,-41-RND()*3,1)}
+for(let x=-WX+3;x<=WX;x+=8){if(x>-27&&x<-3)continue;coconut(x+RND()*2,28.6)}
+const BUSH=[];for(let i=0;i<110;i++){const x=RND()*90-45,z=RND()*48-20;if(Math.abs(x+4)<3&&z<9||Math.abs(x+15)<5&&Math.abs(z-2)<9||Math.abs(x+15)<2.5&&z>9)continue;
+ const b=cone(.3,.6,0x5d8a2e,x,.3,z);b.castShadow=false;cone(.22,.45,0x6f9f36,.25,.22,.1,b);b.userData.bid=BUSH.length;BUSH.push(b)}
+const clearBush=(x,z,hw,hd)=>BUSH.forEach(b=>{if(Math.abs(b.position.x-x)<hw+.5&&Math.abs(b.position.z-z)<hd+.5)b.visible=false});
+S.cut=S.cut||{t:[],b:[]};S.cut.t.forEach(id=>{const t=TREES[id];if(t){t.cut=true;t.g.visible=false;t.b.off=true}});S.cut.b.forEach(id=>{if(BUSH[id])BUSH[id].visible=false});
+const SPOTS=[8,20,32].map(x=>{const J=grp(x,31.3);box(1.8,.15,2.4,lamb(woodT),0,.25,0,J);for(const sx of[-.8,.8])cyl(.08,.08,.7,0x5a3a20,sx,0,1.1,J);
+ box(1,.4,.05,lamb(signT('Pancing','#1f6fb2','#fff')),0,1,-1.1,J).castShadow=false;cyl(.04,.04,.8,0x5a3a20,0,.4,-1.12,J);return{x,z:30.6}});
+// tapak sangkar di sungai (papan tanda bila belum dibina)
+const RSIGN={};['ikan','udang'].forEach(t=>{const T=TYPES[t],g=grp(T.river,30);cyl(.05,.05,1.2,0x7a4a26,0,.6,0,g);box(2.6,.55,.06,lamb(signT('Tapak '+T.n,'#1f6fb2','#fff')),0,1.25,0,g).castShadow=false;RSIGN[t]=g});
+// KENDERAAN (perlu dibeli)
+const VEH=[];
+function moto(x,z,rot){const V=grp(x,z);const tor=new THREE.TorusGeometry(.34,.035,6,18);
+ for(const oz of[-.55,.55]){const w=mesh(tor,0x1b1b1b,0,.36,oz,V);w.rotation.y=Math.PI/2;cyl(.03,.03,.66,0xaaaaaa,0,.36,oz,V,4).rotation.x=Math.PI/2}
+ const fr=0x1f9e8a;let t=box(.05,.05,.9,fr,0,.62,0,V);t.rotation.x=.12;t=box(.05,.5,.05,fr,0,.55,-.2,V);t.rotation.x=-.3;t=box(.05,.55,.05,fr,0,.6,.45,V);t.rotation.x=.25;
+ box(.16,.06,.26,0x222222,0,.9,-.28,V);box(.55,.04,.04,0x888888,0,1.02,.52,V);cyl(.06,.06,.06,0x888888,0,.36,0,V);
+ const raga=new THREE.Group();V.add(raga);raga.position.set(0,.95,.78);
+ box(.4,.03,.32,0x9a6435,0,0,0,raga);for(const sx of[-.2,.2])box(.03,.22,.32,0x9a6435,sx,.1,0,raga);for(const sz of[-.16,.16])box(.4,.22,.03,0x9a6435,0,.1,sz,raga);
+ const load=new THREE.Group();V.add(load);box(.3,.2,.24,0xc8a064,0,1.15,.78,load);
+ V.rotation.y=rot;VEH.push({id:'moto',g:V,kind:'moto',name:'Basikal',max:13,acc:9,sp:0,h:rot,r:.7,load,raga})}
+function pickup(x,z,rot){const V=grp(x,z);for(const ox of[-.85,.85])for(const oz of[-1.1,1.2]){const w=cyl(.38,.38,.25,0x1b1b1b,ox,.38,oz,V,12);w.rotation.z=Math.PI/2}
+ box(1.8,.7,3.6,0x2f6f9f,0,.85,0,V);box(1.7,.08,1.4,0x2f6f9f,0,1.9,.6,V);
+ for(const ox of[-.83,.83])box(.06,.7,.12,0x2f6f9f,ox,1.55,1.25,V);box(1.6,.7,.04,glass,0,1.55,1.3,V);
+ box(.4,.08,.4,0x333333,-.42,1.35,1.05,V);box(1.7,.4,1.6,0x24597f,0,1.35,-1,V);
+ const load=new THREE.Group();V.add(load);for(let i=0;i<4;i++)box(.5,.4,.5,0xc8a064,-.45+(i%2)*.9,1.75,-.6-Math.floor(i/2)*.7,load);
+ V.rotation.y=rot;VEH.push({id:'car',g:V,kind:'car',name:'Pickup',max:22,acc:11,sp:0,h:rot,r:1.3,load})}
+moto(-7.5,-2,Math.PI);pickup(-8.5,-16,Math.PI);
+const PARK={moto:[-7.5,-2,Math.PI],car:[-8.5,-16,Math.PI]};
+VEH.forEach(v=>{const p=S.veh[v.id].pos;if(p){v.g.position.set(p[0],0,p[1]);v.h=p[2];v.g.rotation.y=p[2]}});
+const ragaLv=()=>S.veh.moto.raga||0;const vcap=v=>v.id==='moto'?RAGA[ragaLv()].cap:VSHOP[v.id].cap;const fixRaga=()=>{const v=VEH.find(x=>x.id==='moto');if(v){const k=1+ragaLv()*.35;v.raga.scale.set(k,1+ragaLv()*.2,k)}};
+const vcargo=v=>S.veh[v.id].cargo;
+// PEMAIN
+const player=grp(HOME.x,HOME.z);
+const pLegs=box(.42,.7,.28,0x2d3a55,0,.35,0,player),pBody=box(.6,.75,.36,0x2f8f5b,0,1.05,0,player);ball(.25,0xc68e5f,0,1.65,0,player);
+const hatG=new THREE.Group(),accG=new THREE.Group();player.add(hatG,accG);
+function dress(){const W=S.wear,b=CL[W.baju],s=CL[W.seluar];
+ pBody.material=b.tx?lamb(TX[b.tx]):M(b.col);pLegs.material=s.tx?lamb(TX[s.tx]):M(s.col);
+ clearG(hatG);clearG(accG);const h=W.topi,a=W.aks;
+ if(h==='t_caping')cyl(.02,.55,.28,0xe2c46e,0,1.92,0,hatG,10);
+ if(h==='t_songkok')cyl(.24,.24,.22,0x111111,0,1.88,0,hatG,16);
+ if(h==='t_koboi'){cyl(.52,.52,.04,0x8a5a2b,0,1.84,0,hatG,16);cyl(.2,.25,.3,0x8a5a2b,0,2,0,hatG,12)}
+ if(h==='t_tanjak'){const t=cone(.3,.5,0xd4a017,0,2.02,0,hatG,4);t.rotation.y=Math.PI/4;cyl(.27,.27,.1,0x7a1f1f,0,1.84,0,hatG,12)}
+ if(h==='t_durian'){ball(.32,0x9bb83a,0,1.96,0,hatG);for(let i=0;i<14;i++){const u=i/14*Math.PI*2,v=.3+(i%3)*.3;cone(.05,.14,0x6f8a24,Math.cos(u)*.3*Math.sin(v),1.96+Math.cos(v)*.3+.05,Math.sin(u)*.3*Math.sin(v),hatG,4)}}
+ if(h==='t_ayam'){ball(.32,0xffffff,0,1.94,0,hatG);for(let i=0;i<3;i++)box(.06,.16,.12,0xdd2233,0,2.28,-.1+i*.1,hatG);const k=cone(.07,.18,0xe0a91c,0,1.92,.36,hatG,4);k.rotation.x=Math.PI/2;for(const sx of[-.12,.12])ball(.04,0x111111,sx,2.02,.27,hatG)}
+ if(a==='a_hitam'){for(const sx of[-.1,.1])box(.15,.08,.03,0x111111,sx,1.68,.24,accG);box(.06,.02,.02,0x111111,0,1.69,.25,accG)}
+ if(a==='a_bintang'){for(const sx of[-.12,.12]){const s=cyl(.12,.12,.03,0xff4fa3,sx,1.68,.25,accG,5);s.rotation.x=Math.PI/2}}
+ if(a==='a_misai'){const m=box(.3,.06,.05,0x3b2412,0,1.57,.24,accG);m.rotation.z=.05}
+ if(a==='a_cape'){const c=box(.64,1,.03,0xd62828,0,1.02,-.22,accG);c.rotation.x=.18}}
+const helperNPC=person(-10,8,0xff8a1c,0xffffff);helperNPC.visible=false;
+const marker=mesh(new THREE.RingGeometry(.35,.55,24),new THREE.MeshBasicMaterial({color:0xffd23f,side:THREE.DoubleSide}),0,.08,0);marker.rotation.x=-Math.PI/2;marker.visible=false;marker.castShadow=false;
+const rainG=new THREE.BufferGeometry(),rp=new Float32Array(900*3);for(let i=0;i<rp.length;i++)rp[i]=Math.random()*40-20;
+rainG.setAttribute('position',new THREE.BufferAttribute(rp,3));const rain=new THREE.Points(rainG,new THREE.PointsMaterial({color:0xcfe6ff,size:.12,transparent:true,opacity:.7}));scene.add(rain);
+
+/* ================= PROJEK ================= */
+const FOOT={hw:7.6,hd:6};const V3=[];const WANDER=[];const I=[];const BEDMESH=[];
+const isRiver=E=>!!TYPES[E.t].river;
+function stockN(E){return E.t==='ayam'?E.n:E.batch?E.batch.n:E.herd?E.herd.length:0}
+const cap=E=>TYPES[E.t].cap[E.lvl-1];
+const scap=E=>TYPES[E.t].store[E.lvl-1];
+const feedCost=E=>Math.round((TYPES[E.t].feed||0)*stockN(E)*10)/10;
+function animal(kind,col,p){const g=grp(0,0,p);
+ if(kind==='ayam'){const b=ball(.22,col,0,.25,0,g);b.scale.set(1,.85,1.3);ball(.12,col,0,.45,.22,g);box(.06,.1,.06,0xdd2233,0,.58,.22,g);box(.05,.04,.08,0xe0a91c,0,.45,.35,g)}
+ if(kind==='kambing'){box(.5,.45,.9,col,0,.75,0,g);box(.3,.32,.38,col,0,1.05,.55,g);for(const sx of[-.08,.08]){const h=cone(.04,.2,0x444444,sx,1.28,.5,g,4);h.rotation.x=-.4}
+  for(const[sx,sz]of[[-.18,-.3],[.18,-.3],[-.18,.3],[.18,.3]])box(.1,.5,.1,col,sx,.25,sz,g)}
+ if(kind==='lembu'){box(.9,.75,1.7,col[0],0,1.15,0,g);box(.5,.5,.6,col[0],0,1.45,1.05,g);box(.3,.25,.1,0xd9a6a0,0,1.3,1.37,g);if(col[1])box(.92,.4,.6,col[1],0,1.3,-.3,g);
+  for(const[sx,sz]of[[-.3,-.6],[.3,-.6],[-.3,.6],[.3,.6]])box(.18,.8,.18,col[0],sx,.4,sz,g)}
+ if(kind==='ikan'){const f=ball(.18,col,0,0,0,g);f.scale.set(.5,.6,1.4);f.castShadow=false}
+ return g}
+function buildEnt(i){const E=S.ents[i],T=TYPES[E.t],G=grp(E.x,E.z);const v={G,E};V3[i]=v;if(!T.river)clearArea(E.x,E.z,FOOT.hw,FOOT.hd);
+ if(T.river)RSIGN[E.t].visible=false;
+ v.stakes=new THREE.Group();G.add(v.stakes);
+ if(!T.river){for(const sx of[-6,6])for(const sz of[-4.5,4.5])cyl(.06,.06,.7,0xc8a064,sx,.35,sz,v.stakes);
+  box(2.8,.6,.06,lamb(signT(T.ic+' '+T.n,'#7a4a26','#fff')),0,1.1,FOOT.hd-.2,v.stakes).castShadow=false;cyl(.05,.05,1.2,0x7a4a26,0,.6,FOOT.hd-.25,v.stakes)}
+ const S2=v.st=new THREE.Group();G.add(S2);v.dyn=new THREE.Group();G.add(v.dyn);
+ const fence=(hx,hz,gap)=>{const post=(x,z)=>cyl(.07,.07,.9,0x8b5a2b,x,.45,z,S2),rail=(x,z,l,r)=>{const b=box(l,.08,.06,0xa8743f,x,.6,z,S2);b.rotation.y=r};
+  for(let t=-hx;t<=hx+.01;t+=hx/3){post(t,-hz);if(Math.abs(t)>gap)post(t,hz)}for(let t=-hz;t<=hz+.01;t+=hz/2){post(-hx,t);post(hx,t)}
+  rail(0,-hz,2*hx,0);rail(-hx,0,2*hz,Math.PI/2);rail(hx,0,2*hz,Math.PI/2);rail(-(hx+gap)/2,hz,hx-gap,0);rail((hx+gap)/2,hz,hx-gap,0)};
+ if(E.t==='kebun'){fence(6,4.8,1.4);v.beds=[];
+  for(let r=0;r<3;r++)for(let c=0;c<4;c++){const k=r*4+c,g=grp(-4.2+c*2.8,-2.8+r*2.8,S2);const soil=box(2.3,.2,2.3,new THREE.MeshLambertMaterial({color:soilC.semak}),0,.1,0,g);
+   soil.userData={ent:i,k};BEDMESH.push(soil);
+   const weeds=new THREE.Group();g.add(weeds);for(let j=0;j<5;j++)cone(.16,.5,0x4c7d2a,(Math.random()-.5)*1.7,.45,(Math.random()-.5)*1.7,weeds,5);
+   const rows=new THREE.Group();g.add(rows);for(const o of[-.6,0,.6])box(2,.08,.3,0x5a3820,0,.22,o,rows);
+   const crop=new THREE.Group();g.add(crop);v.beds.push({g,soil,weeds,rows,crop,key:''});
+   I.push({x:E.x-4.2+c*2.8,z:E.z-2.8+r*2.8,r:1.7,ent:i,bed:k,prim:()=>bedPrim(i,k),chips:()=>bedChips(i,k)})}
+  const T2=grp(-7,3.6,S2);for(const sx of[-.5,.5])for(const sz of[-.5,.5])cyl(.06,.06,2,0x777d84,sx,1,sz,T2);cyl(.6,.6,1.2,0x3f7fb0,0,2.6,0,T2,14);v.solid=block(E.x-7,E.z+3.6,.6,.6)}
+ if(E.t==='ayam'){fence(6,4.5,1.4);const H=grp(-3,-2.5,S2);for(const sx of[-1,1])for(const sz of[-.8,.8])cyl(.07,.07,.8,0x6b4423,sx,.4,sz,H);
+  box(2.6,1.3,2,lamb(woodT),0,1.45,0,H);const z=box(3,.08,2.4,0x9aa3a8,0,2.2,0,H);z.rotation.x=.15;for(let k=0;k<4;k++)box(.5,.06,.25,0x7a4a26,0,.75-k*.18,1.1+k*.2,H);
+  v.solid=block(E.x-3,E.z-2.5,1.4,1.1);v.area={x0:-5,x1:5,z0:-.5,z1:4}}
+ if(T.river){// sangkar terapung di sungai
+  for(const sx of[-2.2,2.2])for(const sz of[-2.2,2.2]){const b=cyl(.35,.35,.7,0x1f6fb2,sx,.15,sz,S2,10);b.rotation.x=Math.PI/2}
+  for(const s of[-2.2,2.2]){box(5,.12,.3,lamb(woodT),0,.5,s,S2);box(.3,.12,5,lamb(woodT),s,.5,0,S2)}
+  box(4.1,.9,4.1,netMat,0,.2,0,S2).castShadow=false;for(const sx of[-2,2])for(const sz of[-2,2])cyl(.04,.04,1,0x8b5a2b,sx,1,sz,S2);
+  box(1.4,.12,2.4,lamb(woodT),0,.4,-3.4,S2);
+  v.shel=new THREE.Group();S2.add(v.shel);if(E.t==='udang')for(let k=0;k<8;k++){const s=box(.08,.05,1.4,0x6b4a26,-1.4+Math.random()*2.8,.3,-1.4+Math.random()*2.8,v.shel);s.rotation.y=Math.random()*3}
+  v.fish=[]}
+ if(E.t==='kambing'){fence(7,5,1.4);const H=grp(-3.5,-2.6,S2);for(const sx of[-2,0,2])for(const sz of[-1.3,1.3])cyl(.1,.1,1.3,0x6b4423,sx,.65,sz,H);
+  for(let k=0;k<9;k++)box(.4,.06,2.8,0x9a6435,-2+k*.5,1.33,0,H);box(4.6,1.1,.08,lamb(woodT),0,1.9,-1.4,H);box(.08,1.1,2.8,lamb(woodT),-2.3,1.9,0,H);box(.08,1.1,2.8,lamb(woodT),2.3,1.9,0,H);
+  const rf=box(5.2,.1,3.6,0x9aa3a8,0,2.6,0,H);rf.rotation.x=.12;const rp2=box(.8,.08,1.8,0x7a4a26,2.9,.7,.4,H);rp2.rotation.z=.6;
+  v.solid=block(E.x-3.5,E.z-2.6,2.4,1.5);v.area={x0:-6,x1:6,z0:.3,z1:4.3}}
+ if(E.t==='lembu'){fence(7.2,5.2,1.6);const H=grp(-2,-2.8,S2);for(const sx of[-3.6,0,3.6])for(const sz of[-1.5,1.5])cyl(.12,.12,2.6,0x777d84,sx,1.3,sz,H);
+  box(7.6,.08,3.4,0xc9c2b3,0,.05,0,H);const rf=box(8,.12,4,0x8f3320,0,2.7,0,H);rf.rotation.x=.1;box(6,.4,.5,0x6b4423,0,.4,-1.2,H);
+  v.solid=block(E.x-2,E.z-2.8,3.9,1.8);v.area={x0:-6,x1:6,z0:.2,z1:4.4}}
+ v.worker=person(4.5,4,0x1f6fb2,0xffffff,G);v.worker.visible=false;if(T.river)v.worker.position.set(0,.5,-3.6);
+ v.sprite=new THREE.Sprite(iconMat('❗'));v.sprite.scale.set(1.7,1.7,1);v.sprite.position.set(0,5.2,0);v.sprite.renderOrder=9;G.add(v.sprite);v.icon='';
+ const ix=E.x,iz=T.river?30.2:E.z+FOOT.hd+.6;
+ I.push({x:ix,z:iz,r:T.river?3:3.4,ent:i,cx:E.x,cz:E.z,main:true,prim:()=>entPrim(i),chips:()=>entChips(i)});
+ refreshEnt(i)}
+function refreshEnt(i){const v=V3[i],E=S.ents[i];if(!v)return;const T=TYPES[E.t],on=E.st==='on';
+ v.stakes.visible=!on;v.st.visible=on||(T.river&&E.step>=2);
+ if(v.solid)v.solid.off=!on;
+ v.worker.visible=!!E.worker;
+ if(E.t==='kebun')E.beds.forEach((b,k)=>{const B=v.beds[k];B.g.visible=k<cap(E)&&on;if(!B.g.visible)return;
+  B.weeds.visible=b.st==='semak';B.rows.visible=b.st==='gembur'||b.st==='tanam';
+  B.soil.material.color.setHex(b.st==='tanam'&&(b.w||S.weather===2)?soilC.wet:b.st==='tanam'?soilC.gembur:soilC[b.st]);
+  const key=b.st+b.c+':'+Math.min(b.g,9);if(key===B.key)return;B.key=key;clearG(B.crop);if(b.st!=='tanam')return;
+  const C=CROPS[b.c],f=Math.min(1,(b.g+1)/(C.d+1)),ripe=b.g>=C.d;
+  for(const ox of[-.6,0,.6])for(const oz of[-.6,0,.6]){const h=.15+f*.7;cone(.18+f*.16,h,ripe?0x3f9a3a:0x5fae45,ox,.22+h/2,oz,B.crop);if(ripe)ball(.11,C.col,ox+.1,.27+h*.6,oz+.1,B.crop)}});
+ const want=!on?0:E.t==='ayam'?Math.min(E.n,12):E.herd?Math.min(E.herd.length,6):0;
+ if(v.area&&(v.animals||[]).length!==want){(v.animals||[]).forEach(a=>{v.dyn.remove(a.m);WANDER.splice(WANDER.indexOf(a),1)});v.animals=[];
+  for(let k=0;k<want;k++){let m;if(E.t==='ayam')m=animal('ayam',k%3?0x8a4b2a:0xf3ede0,v.dyn);
+   else if(E.t==='kambing')m=animal('kambing',k%2?0xf2ede4:0x8a5a3a,v.dyn);
+   else m=animal('lembu',E.herd[k].k==='t'?[0xffffff,0x222222]:[0x8a5a3a],v.dyn);
+   m.position.set(v.area.x0+Math.random()*(v.area.x1-v.area.x0),0,v.area.z0+Math.random()*(v.area.z1-v.area.z0));
+   const a={m,area:v.area,tx:0,tz:0,t:0,sp:E.t==='ayam'?.8:.5};v.animals.push(a);WANDER.push(a)}}
+ if(T.river){const n=E.batch?3:0;if(v.fish.length!==n){v.fish.forEach(f=>v.dyn.remove(f));v.fish=[];for(let k=0;k<n;k++){const f=animal('ikan',E.t==='udang'?0x9fb7c9:0xe08a6a,v.dyn);f.userData={ph:Math.random()*6,x:-1.2+k*1.2,z:-.5};v.fish.push(f)}}}
+ const ic=entIcon(E);if(ic!==v.icon){v.icon=ic;v.sprite.visible=!!ic;if(ic)v.sprite.material=iconMat(ic)}}
+const refreshAll=()=>S.ents.forEach((_,i)=>refreshEnt(i));
+
+/* ================= LOGIK ================= */
+const ripeB=b=>b.st==='tanam'&&b.g>=CROPS[b.c].d;
+function needsCare(E){if(E.st!=='on'||E.worker)return false;
+ if(E.t==='kebun')return S.weather!==2&&E.beds.some((b,k)=>k<cap(E)&&b.st==='tanam'&&!b.w&&!ripeB(b));
+ return stockN(E)>0&&(!E.fed||E.clean<50)}
+function hasHarvest(E){if(E.st!=='on')return false;if(Object.keys(E.store).length)return true;
+ if(E.t==='kebun')return E.beds.some((b,k)=>k<cap(E)&&ripeB(b));
+ if(E.batch)return E.batch.age>=SPECIES[E.batch.sp].d;if(E.herd)return E.herd.some(a=>a.k==='d'&&a.age>=TYPES[E.t].mature);return false}
+const overdue=E=>E.worker&&S.day-E.check>3;
+function entIcon(E){if(E.st!=='on')return'📘';if(E.hp<50&&stockN(E))return'🤒';if(overdue(E))return'📋';if(hasHarvest(E))return'🧺';if(needsCare(E))return'❗';
+ if(E.t==='kebun'&&E.beds.some((b,k)=>k<cap(E)&&b.st!=='tanam'))return'🌱';if(!stockN(E)&&E.t!=='kebun')return'🛒';return''}
+function entLabel(i){const E=S.ents[i],T=TYPES[E.t];if(E.st!=='on')return['📘','Sediakan'];return[entIcon(E)||T.ic,'Urus']}
+function bedLabel(i,k){const E=S.ents[i];if(E.st!=='on')return['📘','Sediakan'];const b=E.beds[k];
+ if(b.st==='semak')return['🌿','Bersihkan'];if(b.st==='bersih')return['⛏️','Gembur'];if(b.st==='gembur')return['🌱','Semai'];
+ if(ripeB(b))return['🧺','Tuai'];return b.w?['✅','Sudah siram']:['💧','Siram']}
+function newEnt(t,x,z){const E={t,x,z,lvl:1,st:'setup',step:0,hp:100,fed:false,clean:100,worker:false,check:S.day,store:{}};
+ if(t==='kebun')E.beds=Array.from({length:12},()=>({st:'semak',c:null,g:0,w:false,miss:0}));if(t==='ayam')E.n=0;if(TYPES[t].river)E.batch=null;if(t==='kambing'||t==='lembu')E.herd=[];
+ S.ents.push(E);buildEnt(S.ents.length-1);save();return S.ents.length-1}
+let lostMsg=0;
+function stash(E,k,q){if(q<=0)return;const got=fit(E.store,scap(E),k,q);if(got<q&&S.day!==lostMsg){lostMsg=S.day;toast('⚠️ Stor '+TYPES[E.t].n+' penuh — '+Math.round((q-got)*10)/10+' '+nameOf(k)+' rosak. Kutip selalu!')}}
+function harvestBatch(E){const B=E.batch,sp=SPECIES[B.sp],surv=(E.t==='udang'?.65:.85)*(E.hp>=50?1:.7);const kg=Math.round(B.n*surv*sp.kg*10)/10;stash(E,'kg_'+B.sp,kg);E.batch=null;return kg}
+function dayEnt(E){const T=TYPES[E.t];if(E.st!=='on')return;let wk=false;const hp=S.helper&&!E.worker;
+ if(E.worker){if(false){}
+  else{E.owed=(E.owed||0)+GAJI[E.t]/BULAN;wk=S.day-1-E.check<=3||Math.random()<.5;if(!wk)toast('📋 Pekerja '+T.n+' curi tulang semalam — datang semak!')}}
+ if(E.t==='kebun'){E.beds.forEach((b,k)=>{if(k>=cap(E))return;
+   if(wk){if(b.st==='semak')b.st='bersih';if(b.st==='bersih')b.st='gembur';if(b.st==='gembur'&&E.last&&S.money>=CROPS[E.last].seed){pay(-CROPS[E.last].seed,'Benih '+CROPS[E.last].n+' (pekerja)');Object.assign(b,{st:'tanam',c:E.last,g:0,w:true,miss:0})}}
+   if(b.st!=='tanam')return;const C=CROPS[b.c];if(b.g<C.d){if(wk||hp)b.w=true;if(b.w)b.g++;else b.miss=1}b.w=false;
+   if(wk&&ripeB(b)){const gr=b.miss?'B':'A';stash(E,'hasil_'+b.c+'_'+gr,yk(b.c,gr));Object.assign(b,{st:'bersih',c:null,g:0,miss:0})}});return}
+ const n=stockN(E);if(!n){E.fed=false;return}
+ if((wk||(hp&&!E.fed))){const fc=feedCost(E);if(S.money>=fc){pay(-fc,'Makanan '+T.n+(wk?' (pekerja)':' (pembantu)'));E.fed=true}E.clean=100}else if(hp)E.clean=100;
+ if(E.fed){if(E.clean>=40)E.hp=Math.min(100,E.hp+10);if(E.self&&E.clean>=40)addSkill(E.t,1)}else E.hp-=20;E.self=false;
+ E.clean=Math.max(0,E.clean-25);if(E.clean<30)E.hp-=10;if(nearDecor(E.x,E.z,['telaga'],15+FOOT.hw))E.hp=Math.min(100,E.hp+5);const hf=E.hp>=50?1:.5;
+ if(E.fed){if(E.t==='ayam')stash(E,'telur',Math.round(E.n*.85*hf));if(E.batch)E.batch.age++;
+  if(E.herd){E.herd.forEach(a=>a.age++);const t=E.herd.filter(a=>a.k==='t').length;if(t)stash(E,'susu',Math.round(t*8*hf))}}
+ if(E.hp<=0){if(E.t==='ayam')E.n=Math.max(0,E.n-2);if(E.batch)E.batch.n=Math.round(E.batch.n*.7);if(E.herd)E.herd.pop();E.hp=40;toast('😢 Ada ternakan mati di '+T.n+' — jaga makan & kebersihan!')}
+ E.hp=Math.max(0,E.hp);
+ if(wk&&E.batch&&E.batch.age>=SPECIES[E.batch.sp].d){const sp=E.batch.sp;harvestBatch(E);const c=Math.round(cap(E)*SPECIES[sp].seed);
+  if(S.money>=c){pay(-c,'Benih '+SPECIES[sp].n+' (pekerja)');E.batch={sp,n:cap(E),age:0}}}
+ E.fed=false}
+
+/* ================= KAPSYEN + KERJA (tanpa pop-up) ================= */
+let capT=0,busy=null;
+function say(html,sec=8,hd){const c=$('#cap');c.innerHTML='<div class="ch">'+(hd||'📗 SOP & INFO')+'</div>'+html;c.classList.remove('hide');capT=sec}
+// alat di tangan
+const toolG=new THREE.Group();toolG.position.set(.42,1.05,.12);player.add(toolG);const TOOLS={};
+{const t=n=>{const g=new THREE.Group();g.visible=false;toolG.add(g);TOOLS[n]=g;return g};
+ let g=t('cangkul');box(.05,.95,.05,0x8b5a2b,0,-.2,0,g);box(.28,.05,.2,0x9a9a9a,0,-.65,.1,g);
+ g=t('penyiram');cyl(.13,.15,.26,0x2e8b57,0,-.3,.05,g,10);const sp=box(.04,.04,.35,0x2e8b57,0,-.25,.3,g);sp.rotation.x=-.5;
+ g=t('penyapu');box(.04,.95,.04,0xc8a064,0,-.2,0,g);box(.25,.25,.08,0xe2c46e,0,-.75,0,g);
+ g=t('baldi');cyl(.15,.12,.25,0xffd23f,0,-.35,.05,g,10);
+ g=t('raga');cyl(.2,.15,.2,0x9a6435,0,-.35,.1,g,10);
+ g=t('tukul');box(.04,.5,.04,0x8b5a2b,0,-.1,0,g);box(.18,.08,.08,0x555555,0,-.35,0,g);
+ g=t('tangan');ball(.08,0xc68e5f,0,-.3,.1,g);
+ g=t('kapak');box(.05,.9,.05,0x8b5a2b,0,-.2,0,g);box(.06,.22,.28,0x9a9a9a,0,-.55,.12,g);
+ g=t('sabit');box(.04,.45,.04,0x8b5a2b,0,-.1,0,g);const sb=box(.03,.05,.4,0xbdbdbd,0,-.35,.15,g);sb.rotation.x=.6}
+const DROPS=[];
+function splash(x,z,col){for(let i=0;i<14;i++){const m=ball(.05,col||0x7fc8ff,x+(Math.random()-.5)*1.6,1+Math.random()*.6,z+(Math.random()-.5)*1.6);m.castShadow=false;DROPS.push({m,vy:-Math.random()*2,life:1})}}
+function work(ic,label,dur,tool,fn,face){if(busy||modalOn)return;target=null;pending=null;marker.visible=false;
+ if(face)player.rotation.y=Math.atan2(face.x-player.position.x,face.z-player.position.z);
+ Object.values(TOOLS).forEach(g=>g.visible=false);if(TOOLS[tool])TOOLS[tool].visible=true;
+ dur=Math.min(.7,Math.max(.25,dur*.3));say(ic+' <b>'+label+'…</b><div class="pb"><i id="pbi"></i></div>',99,'⏳ SEDANG BEKERJA');busy={t:0,dur,fn,bar:$('#pbi')};lastChips=''}
+function workTick(dt){const b=busy;b.t+=dt;if(b.bar)b.bar.style.width=Math.min(100,b.t/b.dur*100)+'%';
+ toolG.rotation.x=-.7+Math.sin(b.t*22)*.7;pBody.rotation.x=.25;
+ if(b.t>=b.dur){busy=null;toolG.rotation.x=0;pBody.rotation.x=0;Object.values(TOOLS).forEach(g=>g.visible=false);b.fn();lastChips='';save()}}
+
+/* ================= KEBUN: aksi batas ================= */
+const bedPos=(i,k)=>{const E=S.ents[i];return{x:E.x-4.2+(k%4)*2.8,z:E.z-2.8+Math.floor(k/4)*2.8}};
+function seedFor(E){if(E.last&&S.inv['benih_'+E.last])return E.last;return Object.keys(CROPS).find(c=>S.inv['benih_'+c]>0)}
+const BEDSTEPS={semak:'🌿 bersihkan semak',bersih:'⛏️ gembur & buat batas',gembur:'🌱 semai'};
+function prepBed(E,b,c){const done=[];while(b.st!=='tanam'){if(b.st==='gembur'){if(!c||!S.inv['benih_'+c])break;put(S.inv,'benih_'+c,-1);E.last=c;Object.assign(b,{st:'tanam',c,g:0,w:S.weather===2,miss:0});done.push(BEDSTEPS.gembur+' '+CROPS[c].n);break}
+ done.push(BEDSTEPS[b.st]);b.st=b.st==='semak'?'bersih':'gembur'}return done}
+function bedPrim(i,k){const E=S.ents[i];if(E.st!=='on')return entPrim(i);const b=E.beds[k],P=bedPos(i,k);
+ if(b.st!=='tanam'){const c=seedFor(E),n=(b.st==='semak'?2:b.st==='bersih'?1:0)+(c?1:0);
+  if(!n)return{ic:'🌱',l:'Tiada benih',go:()=>say('🌱 Tiada benih dalam beg. Beli benih di <b>gerai Mak Cik Siti</b> (dekat rumah).')};
+  return{ic:c?'🌱':'⛏️',l:c?'Tanam '+CROPS[c].n:'Sediakan batas',go:()=>sow(i,k,c)}}
+ if(ripeB(b))return{ic:'🧺',l:'Tuai',go:()=>work('🧺','Menuai '+CROPS[b.c].n,.6,'raga',()=>harvestBed(i,k),P)};
+ if(!b.w&&S.weather!==2)return{ic:'💧',l:'Siram',go:()=>{splash(P.x,P.z);work('💧','Menyiram',.5,'penyiram',()=>{b.w=true;gainXP(1);refreshEnt(i);say('💧 Disiram di pangkal pokok (terbaik waktu pagi/petang). '+CROPS[b.c].n+' umur '+b.g+'/'+CROPS[b.c].d+' hari.',5)},P)}};
+ return{ic:'✅',l:'Sudah siram',go:()=>say('✅ '+CROPS[b.c].n+' sudah disiram. Umur <b>'+b.g+'/'+CROPS[b.c].d+' hari</b>. Datang lagi esok.',4)}}
+function kebunTodo(E){let n=0;E.beds.forEach((b,k)=>{if(k>=cap(E))return;if(b.st!=='tanam'||ripeB(b)||(!b.w&&S.weather!==2))n++});return n}
+function kebunAll(i,mode){const E=S.ents[i],list=E.beds.map((b,k)=>k).filter(k=>k<cap(E)&&(()=>{const b=E.beds[k];
+  if(mode==='siram')return b.st==='tanam'&&!ripeB(b)&&!b.w&&S.weather!==2;if(mode==='tuai')return ripeB(b);return b.st!=='tanam'||ripeB(b)||(!b.w&&S.weather!==2)})());
+ if(!list.length){say('✅ Tiada batas yang perlu dikerjakan sekarang.',4);return}
+ const tool=mode==='siram'?'penyiram':mode==='tuai'?'raga':'cangkul';if(mode!=='tuai')splash(E.x,E.z);
+ work('⚡',mode==='siram'?'Menyiram semua batas':mode==='tuai'?'Menuai semua batas':'Mengerjakan semua batas',Math.max(.8,list.length*.25),tool,()=>{
+  let c={prep:0,sow:0,w:0,h:0},got={},noSeed=0;
+  list.forEach(k=>{const b=E.beds[k];
+   if(ripeB(b)&&mode!=='siram'){const C=CROPS[b.c],gr=b.miss?'B':'A',n=(yk(b.c,gr))+bonusBed(E,b.c)[0]*.5,g=fit(S.inv,BEGCAP,'hasil_'+b.c+'_'+gr,n);if(g<n)stash(E,'hasil_'+b.c+'_'+gr,n-g);const gk=C.n+' '+gr;got[gk]=(got[gk]||0)+n;addSkill('kebun',gr==='A'?2:1);Object.assign(b,{st:'bersih',c:null,g:0,w:false,miss:0});c.h++;if(mode==='tuai')return}
+   if(mode==='all'&&b.st!=='tanam'){prepBed(E,b,seedFor(E));if(b.st==='tanam')c.sow++;else{c.prep++;noSeed++}}
+   if(mode!=='tuai'&&b.st==='tanam'&&!b.w&&S.weather!==2){b.w=true;c.w++}});
+  gainXP(c.sow*3+c.h*5+c.w+c.prep);refreshEnt(i);
+  say('⚡ '+[c.h?'🧺 Tuai '+c.h+' batas ('+Object.keys(got).map(g=>got[g]+' '+g).join(', ')+')':'',c.sow?'🌱 Tanam '+c.sow+' batas':'',c.prep?'⛏️ Sediakan '+c.prep+' batas':'',c.w?'💧 Siram '+c.w+' batas':''].filter(Boolean).join(' · ')+
+   (noSeed?'<br>🌱 Benih habis — beli lagi di gerai Mak Cik Siti.':'')+(c.sow?'<br>📗 Ikut SOP: kedalaman & jarak betul, siram pagi & petang.':''),8)},{x:E.x,z:E.z})}
+function bedChips(i,k){const E=S.ents[i];if(E.st!=='on')return entChips(i);const b=E.beds[k],ch=[];
+ if(b.st!=='tanam')Object.keys(CROPS).filter(c=>S.inv['benih_'+c]>0).forEach(c=>ch.push({l:'🌱 '+CROPS[c].n+' ×'+S.inv['benih_'+c],go:()=>{E.last=c;sow(i,k,c)},on:c===seedFor(E)}));
+ if(b.st==='tanam')ch.push({l:'📗 SOP '+CROPS[b.c].n,go:()=>say(sopText(b.c),12)});
+ return ch.concat(kebunChips(i))}
+function kebunChips(i){const E=S.ents[i],ch=[],t=kebunTodo(E);if(E.st!=='on'||!S.bulk)return ch;
+ if(t)ch.push({l:'⚡ Kerjakan semua batas ('+t+')',go:()=>kebunAll(i,'all')});
+ const r=E.beds.filter((b,k)=>k<cap(E)&&ripeB(b)).length;if(r)ch.push({l:'🧺 Tuai semua ('+r+')',go:()=>kebunAll(i,'tuai')});
+ return ch}
+const sopText=c=>{const C=CROPS[c];return'📗 <b>SOP '+C.n+'</b>: kedalaman '+C.dep+', jarak '+C.sp+', matang sebenar '+C.real+', siram pagi & petang. '+C.tip};
+function sow(i,k,c){const E=S.ents[i],b=E.beds[k];if(b.st==='tanam')return;const steps=(b.st==='semak'?2:b.st==='bersih'?1:0)+(c&&S.inv['benih_'+c]?1:0);if(!steps)return;
+ work(c?'🌱':'⛏️',c?'Menanam '+CROPS[c].n:'Menyediakan batas',.5*steps,steps>1?'cangkul':'tangan',()=>{const d=prepBed(E,b,c);gainXP(2*d.length);refreshEnt(i);
+  if(b.st==='tanam'){const C=CROPS[b.c];say('✅ '+d.join(' → ')+'.<br>📗 '+C.n+': kedalaman <b>'+C.dep+'</b>, jarak <b>'+C.sp+'</b>. '+(S.weather===2?'Hujan hari ini membasahkan tanah.':'Benih perlukan air untuk bercambah.'),7)}
+  else say('✅ '+d.join(' → ')+'.<br>🌱 Tiada benih — beli di <b>gerai Mak Cik Siti</b>.',6)},bedPos(i,k))}
+const yk=(c,gr)=>Math.round(CROPS[c].y*(gr==='A'?1:.7)*10)/10;
+const BUAH=['cili','tomato','timun','terung','kacang'];
+function bonusBed(E,c){let n=0,w=[];if(nearDecor(E.x,E.z,['orang'],14+FOOT.hw)){n++;w.push('🧍 orang-orang halau burung')}if(BUAH.includes(c)&&nearDecor(E.x,E.z,['bunga','pasu'],14+FOOT.hw)){n++;w.push('🐝 lebah dari bunga bantu pendebungaan')}return[n,w]}
+function harvestBed(i,k){const E=S.ents[i],b=E.beds[k],b0c=b.c,C=CROPS[b.c],gr=b.miss?'B':'A',bn=bonusBed(E,b.c),n=(yk(b.c,gr))+bn[0]*.5,got=fit(S.inv,BEGCAP,'hasil_'+b.c+'_'+gr,n);
+ if(got<n)stash(E,'hasil_'+b.c+'_'+gr,n-got);const P=bedPos(i,k);splash(P.x,P.z,C.col);
+ Object.assign(b,{st:'bersih',c:null,g:0,w:false,miss:0});gainXP(6);addSkill('kebun',gr==='A'?2:1);refreshEnt(i);
+ say('🧺 Anda menuai <b>'+n+' kg '+C.n+' gred '+gr+'</b>. Di pasar ia berharga <b>'+rm(n*priceOf('hasil_'+b0c+'_'+gr))+'</b>, kos benih hanya '+rm(C.seed)+' — <b>jimat '+rm(n*priceOf('hasil_'+b0c+'_'+gr)-C.seed)+'</b> jika dimasak sendiri! '+(bn[0]?'Bonus +'+bn[0]+' ('+bn[1].join(', ')+'). ':'')+(gr==='A'?'Disiram setiap hari — kualiti terbaik!':'Ada hari tidak disiram, jadi gred B.')+(got<n?'<br>🎒 Beg penuh — '+(n-got)+' kg disimpan di stor kebun.':'')+'<br>Selepas tuai, tanah perlu digembur semula — akar lama dibuang dan tanah diudarakan.')}
+
+/* ================= PROJEK: aksi terus ================= */
+function stepAct(i){const E=S.ents[i],T=TYPES[E.t],s=T.steps[E.step];const P=T.river?{x:E.x,z:31}:{x:E.x,z:E.z};
+ work('🔨',s.t,1.6,'tukul',()=>{E.step++;gainXP(5);const done=E.step>=T.steps.length;if(done){E.st='on';E.check=S.day;addSkill(E.t,2)}refreshEnt(i);
+  say('🔨 <b>'+s.t+'</b> — '+s.say+'<br>'+(done?'🎉 <b>'+T.n+' siap!</b> '+(E.t==='kebun'?'Ketuk batas tanah untuk mula menanam.':'Sekarang beli stok pertama (butang di bawah).'):''),12)},P)}
+function entActs(i){const E=S.ents[i],T=TYPES[E.t],a=[];if(E.st!=='on'){const s=T.steps[E.step];a.push({ic:'🔨',l:(E.step+1)+'/'+T.steps.length+' '+s.t,go:()=>stepAct(i),prim:1});return a}
+ const n=stockN(E),P={x:E.x,z:T.river?31:E.z};
+ if(Object.keys(E.store).length)a.push({ic:'🎒',l:'Kutip hasil',prim:1,go:()=>work('🎒','Mengutip hasil',.8,'raga',()=>collectAct(i),P)});
+ if(E.batch&&E.batch.age>=SPECIES[E.batch.sp].d)a.push({ic:'🎣',l:'Tuai sangkar',prim:1,go:()=>work('🎣','Mengangkat jaring sangkar',1.8,'baldi',()=>{const sp=E.batch.sp,kg=harvestBatch(E);gainXP(10);addSkill(E.t,5);refreshEnt(i);splash(E.x,33);
+  say('🎣 Jaring diangkat dan <b>'+kg+' kg '+SPECIES[sp].n+'</b> dituai ke stor. Tuai awal pagi supaya hasil segar. Kutip ke beg, atau datang dengan kenderaan untuk angkut banyak.',10)},P)});
+ if(E.herd){const r=E.herd.filter(x=>x.k==='d'&&x.age>=T.mature).length;if(r)a.push({ic:'🚛',l:'Jual '+r+' ekor '+rm(r*T.sell),prim:1,go:()=>{E.herd=E.herd.filter(x=>!(x.k==='d'&&x.age>=T.mature));pay(r*T.sell,'Jual '+r+' ekor ternakan');gainXP(15);addSkill(E.t,5);refreshEnt(i);say('🚛 Lori pemborong datang dan menimbang '+r+' ekor ternakan matang. Bayaran <b>'+rm(r*T.sell)+'</b> diterima.')}})}
+ if(n&&!E.fed){const fc=feedCost(E);a.push({ic:'🌾',l:'Beri makan '+rm(fc),prim:1,go:()=>{if(S.money<fc){say('💸 Duit tak cukup untuk beli makanan ternakan.');return}
+  work('🌾','Memberi makan',1.2,'baldi',()=>{pay(-fc,'Makanan '+T.n);E.fed=true;E.self=true;tutEvent('kerja');gainXP(2);refreshEnt(i);say('🌾 '+T.feedSay)},P)}})}
+ if(n&&E.clean<100)a.push({ic:T.river?'🧽':'🧹',l:T.clean+' '+E.clean+'%',prim:E.clean<60,go:()=>work(T.river?'🧽':'🧹',T.clean,1.3,'penyapu',()=>{E.clean=100;gainXP(2);refreshEnt(i);say((T.river?'🧽 ':'🧹 ')+T.cleanSay)},P)});
+ const buyDone=(txt)=>{gainXP(3);refreshEnt(i);say('🛒 '+txt+'<br>'+T.buySay)};
+ if(E.t==='ayam'&&E.n+5<=cap(E))a.push({ic:'🐔',l:'Beli 5 ayam '+rm(100),prim:!n,dis:S.money<100,go:()=>{if(S.money<100)return;if(!n){E.hp=100;E.clean=100}E.n+=5;pay(-100,'Beli 5 ayam penelur');buyDone('5 ekor ayam penelur dibeli.')}});
+ if(T.river&&!E.batch)T.sp.forEach((s,j)=>{const c=Math.round(cap(E)*SPECIES[s].seed);a.push({ic:'🐟',l:SPECIES[s].n+' '+rm(c),prim:j===0,dis:S.money<c,go:()=>{if(S.money<c)return;E.hp=100;E.clean=100;E.batch={sp:s,n:cap(E),age:0};pay(-c,'Benih '+SPECIES[s].n);buyDone(cap(E)+' benih '+SPECIES[s].n+' (matang ±'+SPECIES[s].d+' hari dalam permainan, sebenar '+SPECIES[s].real+').')}})});
+ if(E.herd&&E.herd.length<cap(E))T.buy.forEach((b,j)=>a.push({ic:T.ic,l:b.n.split(' (')[0]+' '+rm(b.price),prim:!n&&j===0,dis:S.money<b.price,go:()=>{if(S.money<b.price)return;if(!n){E.hp=100;E.clean=100}E.herd.push({k:b.k,age:0});pay(-b.price,'Beli '+b.n);buyDone(b.n+' dibeli.')}}));
+ return a}
+function entPrim(i){const E=S.ents[i],T=TYPES[E.t];if(E.t==='kebun'&&E.st==='on'){if(Object.keys(E.store).length)return{ic:'🎒',l:'Kutip hasil',go:()=>kebunStatus(i)};const t=S.bulk&&kebunTodo(E);return t?{ic:'⚡',l:'Kerjakan semua',go:()=>kebunAll(i,'all')}:{ic:'🥬',l:'Status kebun',go:()=>kebunStatus(i)}}
+ const a=entActs(i).find(x=>x.prim&&!x.dis);if(a)return a;return{ic:T.ic,l:'Status',go:()=>entStatus(i)}}
+function entChips(i){const E=S.ents[i],T=TYPES[E.t];let ch=E.t==='kebun'&&E.st==='on'?kebunChips(i):entActs(i).map(a=>({l:a.ic+' '+a.l,go:a.go,dis:a.dis}));
+ if(E.st==='on'){const nx=E.lvl<3?Math.round(T.cost*(E.lvl===1?1.5:3)):0;if(nx)ch.push({l:'⬆️ Tahap '+(E.lvl+1)+' '+rm(nx),dis:S.money<nx,go:()=>{if(S.money<nx)return;pay(-nx,'Naik taraf '+T.n);E.lvl++;gainXP(20);refreshEnt(i);say('⬆️ <b>'+T.n+'</b> dibesarkan ke Tahap '+E.lvl+'. Muatan jadi '+cap(E)+' '+T.unit+' dan stor '+scap(E)+' unit.'+(isMahir(E.t)?' Anda Mahir — boleh upah pekerja di Kedai Pertanian.':''))}});
+  ch.push({l:'ℹ️ Info',go:()=>entInfo(i)})}
+ return ch}
+function collectAct(i){const E=S.ents[i];let t=[];for(const k of Object.keys(E.store)){const g=fit(S.inv,BEGCAP,k,E.store[k]);if(g>0){t.push(g+' '+nameOf(k));put(E.store,k,-g)}}
+ gainXP(2);refreshEnt(i);say(t.length?'🎒 Dikutip ke beg: <b>'+t.join(', ')+'</b>.'+(Object.keys(E.store).length?'<br>Beg penuh — baki masih di stor. Bawa kenderaan untuk angkut lebih banyak.':''):'🎒 Beg penuh! Jual dahulu di gerai Mak Cik Siti.')}
+function kebunStatus(i){const E=S.ents[i],c=f=>E.beds.filter((b,j)=>j<cap(E)&&f(b)).length;
+ say('🥬 <b>Kebun Tahap '+E.lvl+'</b> — '+cap(E)+' batas: 🌿'+c(b=>b.st==='semak')+' semak · ⛏️'+c(b=>b.st==='bersih')+' perlu gembur · 🌱'+c(b=>b.st==='gembur')+' sedia semai · 🥬'+c(b=>b.st==='tanam'&&!ripeB(b))+' tumbuh · 🧺'+c(ripeB)+' masak.<br>👆 Ketuk batas tanah untuk bekerja.'+(Object.keys(E.store).length?'<br>🏚️ Stor: '+Object.keys(E.store).map(k=>E.store[k]+' '+nameOf(k)).join(', '):''),10);
+ if(Object.keys(E.store).length)work('🎒','Mengutip hasil dari stor',.8,'raga',()=>collectAct(i))}
+function entStatus(i){const E=S.ents[i],T=TYPES[E.t];
+ say(T.ic+' <b>'+T.n+' Tahap '+E.lvl+'</b> — '+stockN(E)+'/'+cap(E)+' '+T.unit+' · kesihatan '+E.hp+'% · '+(E.fed?'sudah makan':'belum makan')+' · bersih '+E.clean+'%'+(E.batch?' · umur '+E.batch.age+'/'+SPECIES[E.batch.sp].d+' hari':'')+'<br>💡 '+T.tips[S.day%T.tips.length],10)}
+function entInfo(i){const E=S.ents[i],T=TYPES[E.t];E.check=S.day;
+ modal('<h2>'+T.ic+' '+T.n+' · Tahap '+E.lvl+'</h2>'+(E.t!=='kebun'?'<p>Kesihatan '+E.hp+'%'+bar(E.hp)+'</p><p>'+stockN(E)+'/'+cap(E)+' '+T.unit+'</p>':'<p>'+cap(E)+' batas</p>')+
+ '<p>Stor: '+load(E.store)+'/'+scap(E)+' unit '+(Object.keys(E.store).length?'('+Object.keys(E.store).map(k=>E.store[k]+' '+nameOf(k)).join(', ')+')':'')+'</p>'+
+ '<p>Kemahiran anda: <b>'+skillTag(E.t)+'</b>'+(isMahir(E.t)?'':'<br><small>Cara jadi mahir: '+HOWMAHIR[E.t]+'</small>')+'</p>'+'<p>'+(E.worker?'👷 Ada pekerja · gaji '+rm(GAJI[E.t])+'/bulan · tertunggak '+rm(E.owed||0)+' <button data-a="fire:'+i+'">Berhentikan</button>':'👤 Tiada pekerja'+(isMahir(E.t)?' — upah di Kedai Pertanian':' (perlu jadi Mahir dahulu)'))+'</p>'+
+ '<h3>SOP</h3>'+T.steps.map(s=>'<p>• <b>'+s.t+':</b> '+s.say+'</p>').join('')+(T.feedSay?'<p>• <b>Beri makan:</b> '+T.feedSay+'</p><p>• <b>'+T.clean+':</b> '+T.cleanSay+'</p>':'')+T.tips.map(x=>'<p>• '+x+'</p>').join('')+NOTE(T.src))}
+
+/* ================= TEMPAT TETAP ================= */
+const openHrs=(a,b)=>{const h=hour();return S.min<1440&&h>=a&&h<b};
+const closed=(n,a,b)=>({ic:'🔒',l:'Tutup',go:()=>say('🔒 '+n+' tutup. Buka '+a+' – '+b+'.')});
+const hr=h=>h<12?h+' pagi':h===12?'12 tgh':h-12+(h<19?' petang':' malam');
+let trayMode='';
+I.push({x:HOME.x,z:HOME.z-.8,r:2.4,prim:()=>{const late=!(S.min<1440&&hour()<18);return late?{ic:'😴',l:'Tidur',go:()=>newDay('😴 Anda tidur nyenyak.')}:{ic:'🏠',l:'Rumah',go:()=>say('🏠 Rumah pusaka arwah atuk. Anda boleh <b>tidur selepas 6 petang</b> untuk ke hari esok.')}},
+ chips:()=>{const ch=[{l:'🏗️ Projek baru',go:()=>projModal(false)},{l:'📋 Ladang saya',go:farmModal}],cp=HOUSES[S.house||0].store;
+  const food=Object.keys(S.inv).filter(k=>priceOf(k)>0);if(food.length)ch.unshift({l:'🍲 Masak hasil untuk keluarga',go:()=>{let v=0,m=[];food.slice(0,3).forEach(k=>{const q=Math.min(S.inv[k],k==='telur'?10:k.startsWith('ikan_')?2:1.5);v+=q*priceOf(k);m.push(q+' '+nameOf(k));put(S.inv,k,-q)});v=Math.round(v*100)/100;S.jimat=Math.round(((S.jimat||0)+v)*100)/100;gainXP(3);
+   say('🍲 Keluarga makan <b>'+m.join(', ')+'</b> dari ladang sendiri. Jika dibeli di pasar: <b>'+rm(v)+'</b> — anda <b>jimat '+rm(v)+'</b>! Jumlah jimat setakat ini: <b>'+rm(S.jimat)+'</b>.',10)}});
+  if(cp){ch.unshift({l:'📦 Simpan beg → stor rumah ('+load(S.hstore)+'/'+cp+')',go:()=>{let m=[];for(const k of Object.keys(S.inv)){if(!WT(k))continue;const g=fit(S.hstore,cp,k,S.inv[k]);if(g>0){m.push(g+' '+nameOf(k));put(S.inv,k,-g)}}say(m.length?'📦 Disimpan di stor rumah: <b>'+m.join(', ')+'</b>.':'📦 Tiada barang untuk disimpan, atau stor rumah penuh.',6)}},
+   {l:'📦 Ambil dari stor',dis:!Object.keys(S.hstore).length,go:()=>{let m=[];for(const k of Object.keys(S.hstore)){const g=fit(S.inv,BEGCAP,k,S.hstore[k]);if(g>0){m.push(g+' '+nameOf(k));put(S.hstore,k,-g)}}say(m.length?'🎒 Diambil ke beg: <b>'+m.join(', ')+'</b>.':'🎒 Beg penuh.',6)}})}
+  else ch.push({l:'ℹ️ Besarkan rumah',go:()=>say('🏠 Mahu rumah lebih besar dengan <b>stor simpanan</b>? Pergi ke <b>Kontraktor Rumah</b> di pekan.',6)});return ch}});
+const RATE={siti:.6,runcit:.7,borong:.85};
+const isBasah=k=>/^(ikan_|kg_)/.test(k)||k==='telur'||k==='susu',isKering=k=>k.startsWith('hasil_')||k.startsWith('buah_'),anyK=()=>true;
+function sellTotal(m,f=anyK){let t=0;sources().forEach(s=>Object.keys(s.o).forEach(k=>{if(priceOf(k)>0&&f(k))t+=priceOf(k)*m*s.o[k]}));return Math.round(t*10)/10}
+function sellNow(m,tag,who,f=anyK,ev){const t=sellTotal(m,f);if(!t){say('🧺 Tiada hasil yang sesuai untuk dijual di sini (dalam beg atau kenderaan).');return}
+ const items=[];sources().forEach(s=>Object.keys(s.o).forEach(k=>{if(priceOf(k)>0&&f(k)){items.push(s.o[k]+' '+nameOf(k));delete s.o[k]}}));
+ pay(t,'Jual hasil ('+tag+')');gainXP(5);say('💰 '+who+' membeli <b>'+items.join(', ')+'</b> dengan harga <b>'+rm(t)+'</b> ('+Math.round(m*100)+'% daripada harga pasaran '+rm(t/m)+'). Peniaga perlu untung juga — semakin dekat dengan pembeli akhir, semakin tinggi harga.',10);if(ev)tutEvent(ev)}
+I.push({x:4,z:-4.6,r:2.8,prim:()=>{if(!openHrs(7,19))return closed('Gerai Mak Cik Siti',hr(7),hr(19));const t=sellTotal(RATE.siti);return t?{ic:'💰',l:'Jual '+rm(t),go:()=>sellNow(RATE.siti,'Gerai Siti','Mak Cik Siti',anyK,'jualSiti')}:{ic:'🧺',l:'Sembang',go:()=>say('🧕 “'+['Eh, cucu arwah Pak Mat dah balik kampung!','Kalau banyak hasil, bawa kenderaan ke Pasar Borong hujung jalan — harga lebih tinggi.','Benih sayur Mak Cik ada jual, murah je.','Beg tu kecil, nak. Beli basikal kat pekan senang sikit angkut barang.'][S.day%4]+'”')}},
+ chips:()=>{if(!openHrs(7,19))return[];const sk=S.skill.kebun||0;
+  if(trayMode==='seed')return[{head:'🌱 Benih Mak Cik Siti<small>Duit '+rm(S.money)+' · Mata kebun '+sk+'</small>',l:'✕ Tutup',go:()=>{trayMode=''}}].concat(Object.keys(CROPS).sort((a,b)=>CROPS[a].tier-CROPS[b].tier||CROPS[a].seed-CROPS[b].seed).map(c=>{const C=CROPS[c],lock=sk<C.tier,mv=Math.round(C.price*C.y*100)/100,gain=Math.round((mv-C.seed)*100)/100;
+   return{l:c,card:{ic:CIC[c],n:C.n,cost:C.seed,sell:mv,kg:C.y,mk:C.price,days:C.d,gain,own:S.inv['benih_'+c]||0,lock:lock?C.tier:0},dis:lock||S.money<C.seed,go:()=>{if(lock||S.money<C.seed)return;pay(-C.seed,'Benih '+C.n);put(S.inv,'benih_'+c,1);
+    say('🌱 1 paket benih <b>'+C.n+'</b> ('+rm(C.seed)+') cukup untuk 1 batas → ±<b>'+C.y+' kg</b> (gred A). Di pasar, '+C.y+' kg '+C.n+' berharga <b>'+rm(mv)+'</b> (RM'+C.price+'/kg). Tanam sendiri = <b>jimat '+rm(gain)+'</b>!',10)}}}));
+  return[{l:'🌱 Beli benih ▸',go:()=>{trayMode='seed'}}]}});
+I.push({x:SHOPX.agri,z:-38.6,r:3,prim:()=>openHrs(8,18)?{ic:'🧑‍🌾',l:'Kedai Pertanian',go:()=>say('🧑‍🌾 Agensi pekerja: anda hanya boleh upah pekerja untuk projek yang anda sudah <b>Mahir</b>. Gaji dibayar <b>setiap hujung bulan</b> (1 bulan = '+BULAN+' hari dalam permainan).<br>'+S.ents.filter(E=>E.st==='on').map(E=>TYPES[E.t].ic+' '+TYPES[E.t].n+': '+skillTag(E.t)).join(' · '),12)}:closed('Kedai Pertanian',hr(8),hr(18)),
+ chips:()=>{if(!openHrs(8,18))return[];const ch=[];S.ents.forEach((E,i)=>{const T=TYPES[E.t];if(E.st!=='on'||E.worker)return;
+  if(!isMahir(E.t)){ch.push({l:'🔒 '+T.n+' — '+skillTag(E.t),dis:true,go:()=>{}});return}
+  ch.push({l:'👷 Upah untuk '+T.n+' '+rm(GAJI[E.t])+'/bulan',go:()=>hire(i)})});
+  if(S.ents.some(E=>E.st==='on'))ch.push(S.helper?{l:'👋 Berhentikan Pembantu Am',go:()=>{if(S.helperOwed){pay(-Math.round(S.helperOwed*10)/10,'Gaji akhir Pembantu Am');S.helperOwed=0}S.helper=false;say('👋 Pembantu Am diberhentikan.',4)}}:
+   {l:'🧑‍🌾 Upah Pembantu Am '+rm(GAJI_HELPER)+'/bulan',go:()=>{S.helper=true;S.helperOwed=0;checkBulk();save();say('🧑‍🌾 <b>Pembantu Am</b> diupah. Setiap hari dia <b>siram semua batas</b>, <b>beri makan & kemas</b> semua ternakan. Dia <b>tidak</b> menuai atau menjual — itu kerja anda. Gaji '+rm(GAJI_HELPER)+' sebulan. (Kerja yang dia buat tidak beri anda mata kemahiran.)',12)}});
+  ch.push({l:'📚 Buku SOP',go:sopBook});return ch}});
+function checkBulk(){const nw=S.ents.filter(x=>x.worker).length+(S.helper?1:0);if(nw>=2&&!S.bulk){S.bulk=true;setTimeout(()=>say('🎉 <b>Anda kini ada '+nw+' pekerja — anda seorang pengurus ladang!</b><br>Butang baru dibuka: <b>⚡ Kerjakan semua batas</b> dan <b>🧺 Tuai semua</b> di kebun.',14),6000);toast('🔓 Butang ⚡ Kerjakan semua batas dibuka!')}}
+function hire(i){const E=S.ents[i],T=TYPES[E.t];E.worker=true;E.check=S.day;E.owed=0;refreshEnt(i);const nw=S.ents.filter(x=>x.worker).length;
+ say('👷 Pekerja diupah untuk <b>'+T.n+'</b>. Gaji <b>'+rm(GAJI[E.t])+' sebulan</b>, dibayar pada hujung bulan (hari '+(bulan()*BULAN)+'). Dia buat kerja harian, tapi anda mesti <b>datang semak sekurang-kurangnya setiap 3 hari</b>.',12);
+ checkBulk();
+ save()}
+I.push({x:SHOPX.rumah,z:-38.6,r:3,prim:()=>openHrs(8,18)?{ic:'🏠',l:'Kontraktor',go:()=>say('👷‍♂️ “Nak besarkan rumah pusaka atau cat baru? Rumah lebih besar ada <b>stor simpanan</b> untuk hasil ladang.” Rumah sekarang: <b>'+HOUSES[S.house||0].n+'</b>.',8)}:closed('Kontraktor Rumah',hr(8),hr(18)),
+ chips:()=>{if(!openHrs(8,18))return[];const ch=[],nx=HOUSES[(S.house||0)+1];
+  if(nx)ch.push({l:'🏗️ '+nx.n+' '+rm(nx.price)+' (stor '+nx.store+')',dis:S.money<nx.price,go:()=>{if(S.money<nx.price)return;pay(-nx.price,'Naik taraf rumah: '+nx.n);S.house=(S.house||0)+1;buildHouse();gainXP(30);save();
+   say('🏗️ Kontraktor siap membina <b>'+nx.n+'</b>! Rumah lebih selesa dengan <b>stor '+nx.store+' unit</b> untuk simpan hasil. Pulang dan lihat rumah baru anda.',12)}});
+  Object.keys(CAT).filter(c=>c!==(S.cat||'asal')).forEach(c=>ch.push({l:'🎨 Cat '+CAT[c][0]+(CAT[c][2]?' '+rm(CAT[c][2]):''),dis:S.money<CAT[c][2],go:()=>{if(S.money<CAT[c][2])return;if(CAT[c][2])pay(-CAT[c][2],'Cat rumah '+CAT[c][0]);S.cat=c;buildHouse();save();say('🎨 Rumah anda dicat <b>'+CAT[c][0]+'</b>.',5)}}));
+  return ch}});
+I.push({x:SHOPX.vet,z:-38.6,r:3,prim:()=>{if(!openHrs(9,17))return closed('Klinik Veterinar',hr(9),hr(17));const sick=S.ents.filter(E=>E.st==='on'&&E.t!=='kebun'&&stockN(E)&&E.hp<100);
+  return sick.length?{ic:'💉',l:'Rawat '+rm(25*sick.length),dis:S.money<25*sick.length,go:()=>{if(S.money<25*sick.length){say('💸 Duit tak cukup.');return}pay(-25*sick.length,'Rawatan veterinar');sick.forEach(E=>E.hp=100);refreshAll();say('💉 Doktor haiwan melawat dan merawat ternakan anda. Kesihatan kembali 100%. Vaksin & ubat cacing ikut jadual DVS.')}}:{ic:'🩺',l:'Klinik',go:()=>say('🩺 “Ternakan sihat bila diberi makan, air bersih dan tempat bersih setiap hari.”')}},chips:()=>[]});
+I.push({x:SHOPX.butik,z:-38.6,r:3,prim:()=>openHrs(10,21)?{ic:'👕',l:'Butik',go:butik}:closed('Butik',hr(10),hr(21)),chips:()=>[]});
+I.push({x:SHOPX.motor,z:-38.6,r:3,prim:()=>openHrs(8,19)?{ic:'🚲',l:'Kedai Kenderaan',go:()=>say('🚲 Basikal muat '+vcap(VEH[0])+' unit (raga boleh dinaik taraf hingga '+RAGA[RAGA.length-1].cap+'). 🛻 Pickup muat '+VSHOP.car.cap+' unit. Beg hanya '+BEGCAP+'. Kenderaan dihantar ke rumah.')}:closed('Kedai Kenderaan',hr(8),hr(19)),
+ chips:()=>{if(!openHrs(8,19))return[];const ch=Object.keys(VSHOP).filter(id=>!S.veh[id].own).map(id=>({l:VSHOP[id].ic+' Beli '+VSHOP[id].n+' '+rm(VSHOP[id].price),dis:S.money<VSHOP[id].price,go:()=>buyVeh(id)}));
+  const nx=RAGA[ragaLv()+1];if(S.veh.moto.own&&nx)ch.unshift({l:'🧺 '+nx.n+' ('+nx.cap+' unit) '+rm(nx.price),dis:S.money<nx.price,go:()=>{if(S.money<nx.price)return;pay(-nx.price,'Naik taraf raga basikal');S.veh.moto.raga=ragaLv()+1;fixRaga();save();say('🧺 Raga basikal dinaik taraf: <b>'+nx.n+'</b>. Muatan kini <b>'+nx.cap+' unit</b>.'+(RAGA[ragaLv()+1]?' Boleh naik taraf lagi.':' Ini raga paling besar!'),7)}});return ch}});
+const MKTI={basah:{n:'Pasar Basah',ic:'🐟',f:isBasah,what:'ikan sungai, ikan & udang ternakan, telur dan susu'},kering:{n:'Pasar Kering',ic:'🥬',f:isKering,what:'sayur-sayuran kebun, dan 🪵 kayu'}};
+['basah','kering'].forEach(m=>{const M=MKTI[m];I.push({x:MKT[m],z:-38.6,r:4.5,borong:m,bname:M.n,prim:()=>({ic:M.ic,l:M.n,go:()=>say(M.ic+' <b>'+M.n+'</b> (Pasar Borong) beli '+M.what+' pada <b>85% harga pasaran</b> (Mak Cik Siti 60%, Kedai Runcit 70%). Hasil mesti dibawa dengan <b>kenderaan</b> — naik basikal/pickup, kemudian tekan GUNA di sini. Buka 6 pagi – 3 petang.',9)}),
+ chips:()=>m==='kering'&&S.kayu>0?[{l:'🪵 Jual '+S.kayu+' kayu ('+rm(S.kayu*3)+')',go:()=>{if(!openHrs(6,15)){say('🔒 Pasar buka 6 pagi – 3 petang.');return}const n=S.kayu;S.kayu=0;pay(n*3,'Jual kayu');say('🪵 Peraih kayu membeli '+n+' batang kayu: <b>'+rm(n*3)+'</b>.',6)}}]:[]})});
+I.push({x:SHOPX.runcit,z:-38.6,r:3,prim:()=>{if(!openHrs(8,21))return closed('Kedai Runcit',hr(8),hr(21));const t=sellTotal(RATE.runcit,k=>isKering(k)||k==='telur');return t?{ic:'💰',l:'Jual '+rm(t),go:()=>sellNow(RATE.runcit,'Kedai Runcit','Tauke Kedai Runcit',k=>isKering(k)||k==='telur','runcit')}:{ic:'🛒',l:'Kedai Runcit',go:()=>say('🛒 Kedai Runcit beli <b>sayur & telur</b> (harga biasa) dan jual <b>beg lebih besar</b>.',6)}},
+ chips:()=>{if(!openHrs(8,21))return[];const nx=BEGS[(S.beg||0)+1];return nx?[{l:'🎒 '+nx.n+' ('+nx.cap+' unit) '+rm(nx.price),dis:S.money<nx.price,go:()=>{if(S.money<nx.price)return;pay(-nx.price,'Beli '+nx.n);S.beg=(S.beg||0)+1;BEGCAP=nx.cap;save();say('🎒 Anda kini guna <b>'+nx.n+'</b> — muat <b>'+nx.cap+' unit</b>.',6)}}]:[]}});
+SPOTS.forEach(s=>I.push({x:s.x,z:s.z,r:2.4,prim:()=>({ic:'🎣',l:'Pancing',go:fishStart}),chips:()=>[]}));
+['ikan','udang'].forEach(t=>I.push({x:TYPES[t].river,z:30,r:2.6,site:t,prim:()=>{const T=TYPES[t];if(!S.ents.length)return{ic:T.ic,l:'Tapak',go:()=>say('Pilih projek pertama dahulu.')};
+  return{ic:'🔨',l:'Bina '+rm(T.cost),dis:S.money<T.cost,go:()=>{if(S.money<T.cost){say('💸 Perlu '+rm(T.cost)+' untuk bina '+T.n+'.');return}pay(-T.cost,'Bina '+T.n);const i=newEnt(t,T.river,34);say('🔨 Tapak <b>'+T.n+'</b> di sungai depan rumah dipilih. Tekan GUNA untuk langkah persediaan.')}}},chips:()=>[{l:'ℹ️ '+TYPES[t].n,go:()=>say(TYPES[t].ic+' '+TYPES[t].desc+' Kos '+rm(TYPES[t].cost)+' · '+TYPES[t].diff)}]}));
+function buyVeh(id){const V=VSHOP[id];if(S.money<V.price)return;pay(-V.price,'Beli '+V.n);S.veh[id].own=true;const v=VEH.find(x=>x.id===id);
+ const p=id==='moto'?[SHOPX.motor+5,-37.6,-Math.PI/2]:PARK[id];v.g.position.set(p[0],0,p[1]);v.h=p[2];v.g.rotation.y=p[2];v.g.visible=true;save();
+ say(id==='moto'?'🚲 Tahniah! <b>Basikal</b> anda sudah sedia <b>di depan kedai ini</b>. Tekan <b>NAIK BASIKAL</b> dan kayuh pulang. Raga muat '+vcap(v)+' unit.':'🛻 Tahniah! <b>Pickup</b> dihantar ke <b>rumah anda</b>. Muatan '+V.cap+' unit.',10)}
+/* ================= TEBANG POKOK, KEMAS SEMAK & MOD BINA ================= */
+const FALLS=[];
+function cutTree(id){const t=TREES[id];if(t.cut)return;
+ work('🪓','Menebang '+(t.kind==='kelapa'?'pokok kelapa':'pokok'),2.2,'kapak',()=>{t.cut=true;t.b.off=true;S.cut.t.push(id);const k=t.kind==='kelapa'?2:3;S.kayu+=k;gainXP(3);tutEvent('tebang');FALLS.push({g:t.g,a:0,dir:Math.random()<.5?1:-1});
+  say('🪓 Pokok ditebang — dapat <b>'+k+' 🪵 kayu</b> (jumlah '+S.kayu+'). Kayu digunakan untuk membina pagar, bangku dan wakaf dalam <b>🔨 Mod Bina</b>.<br>🌳 Ingat: pokok menahan hakisan tanah dan memberi teduh. Tanam semula pokok buah di tempat yang sesuai.',9)},t)}
+function clearBushAct(id){const b=BUSH[id];if(!b.visible)return;
+ work('🌿','Menebas semak',1,'sabit',()=>{b.visible=false;S.cut.b.push(id);gainXP(1);tutEvent('tebas');say('🌿 Semak ditebas. Kawasan bersih mengurangkan ular, nyamuk dan tikus — dan memberi ruang untuk ladang anda.',5)},b.position)}
+function clearArea(x,z,hw,hd){clearBush(x,z,hw,hd);TREES.forEach(t=>{if(!t.cut&&Math.abs(t.x-x)<hw+.5&&Math.abs(t.z-z)<hd+.5){t.cut=true;t.g.visible=false;t.b.off=true;S.cut.t.push(t.id)}})}
+TREES.forEach(t=>I.push({x:t.x,z:t.z,r:2,tree:t.id,prim:()=>({ic:'🪓',l:'Tebang pokok',go:()=>cutTree(t.id)}),chips:()=>[]}));
+BUSH.forEach((b,id)=>I.push({x:b.position.x,z:b.position.z,r:1.3,bush:id,prim:()=>({ic:'🌿',l:'Tebas semak',go:()=>clearBushAct(id)}),chips:()=>[]}));
+// hiasan
+const lampMat=new THREE.MeshLambertMaterial({color:0xfff3c4,emissive:0xffd27a,emissiveIntensity:0});
+const DECOR={
+ pagar:{use:'Menghalang laluan — buat sempadan ladang',n:'Pagar kayu',ic:'🪵',rm:2,kayu:1,w:2,d:.3,solid:1},
+ batu:{use:'Jalan 35% lebih laju bila berjalan atasnya',n:'Laluan batu',ic:'🪨',rm:3,kayu:0,w:2,d:2},
+ bunga:{use:'Tarik lebah pendebunga: tanaman berbuah (cili, tomato, timun, terung, kacang) dalam 14 m hasil +0.5 kg',n:'Pokok bunga raya',ic:'🌺',rm:8,kayu:0,w:1,d:1},
+ pasu:{use:'Tarik lebah pendebunga: tanaman berbuah dalam 14 m hasil +0.5 kg',n:'Pasu bunga',ic:'🪴',rm:5,kayu:0,w:.8,d:.8},
+ lampu:{use:'Menerangi kawasan sekeliling pada waktu malam',n:'Lampu taman',ic:'💡',rm:15,kayu:0,w:.6,d:.6,solid:1},
+ bangku:{use:'GUNA: rehat 1 jam (tunggu kedai buka)',n:'Bangku kayu',ic:'🪑',rm:5,kayu:2,w:2,d:.8,solid:1},
+ orang:{use:'Halau burung: kebun dalam 14 m hasil +0.5 kg setiap batas',n:'Orang-orang',ic:'🧍',rm:6,kayu:1,w:1,d:1,solid:1},
+ papan:{use:'Tanda nama ladang anda',n:'Papan tanda ladang',ic:'🪧',rm:5,kayu:1,w:2.2,d:.4,solid:1},
+ pisang:{use:'Berbuah setiap 3 hari — GUNA untuk petik, jual di Pasar Kering',n:'Pokok pisang',ic:'🍌',rm:8,kayu:0,w:1.4,d:1.4,solid:1},
+ rambutan:{use:'Berbuah setiap 4 hari — GUNA untuk petik',n:'Pokok rambutan',ic:'🌳',rm:12,kayu:0,w:2,d:2,solid:1},
+ kelapa:{use:'Berbuah setiap 2 hari — GUNA untuk petik',n:'Pokok kelapa',ic:'🌴',rm:10,kayu:0,w:1,d:1,solid:1},
+ telaga:{use:'Air bersih: ternakan dalam 15 m kesihatan +5 sehari',n:'Telaga',ic:'🪣',rm:25,kayu:0,w:1.8,d:1.8,solid:1},
+ gerbang:{use:'Pintu masuk ladang — cantik & XP',n:'Gerbang ladang',ic:'⛩️',rm:20,kayu:4,w:4.2,d:.6},
+ wakaf:{use:'GUNA: rehat 2 jam di tempat teduh',n:'Wakaf rehat',ic:'🛖',rm:40,kayu:6,w:4,d:4,solid:1}};
+function decorMesh(t,G){
+ if(t==='pagar'){for(const x of[-.95,.95])cyl(.07,.07,1,0x8b5a2b,x,.5,0,G);for(const y of[.45,.8])box(2,.08,.06,0xa8743f,0,y,0,G)}
+ if(t==='batu'){const b=box(2,.06,2,0xb9b2a4,0,.03,0,G);b.castShadow=false;for(let i=0;i<4;i++){const s=box(.8,.04,.8,0xd8d2c4,(i%2-.5)*.95,.07,(Math.floor(i/2)-.5)*.95,G);s.castShadow=false}}
+ if(t==='bunga'){ball(.5,0x2f7a33,0,.5,0,G);for(let i=0;i<7;i++)ball(.1,0xe0213b,Math.cos(i)*.38,.55+((i*37)%5)*.06,Math.sin(i)*.38,G)}
+ if(t==='pasu'){cyl(.3,.22,.4,0xc0623a,0,.2,0,G,10);ball(.3,0x3f8f3a,0,.55,0,G);for(let i=0;i<4;i++)ball(.07,[0xffd23f,0xff6fb0][i%2],Math.cos(i*1.6)*.2,.75,Math.sin(i*1.6)*.2,G)}
+ if(t==='lampu'){cyl(.06,.08,2.4,0x2b2b2b,0,1.2,0,G);box(.35,.4,.35,lampMat,0,2.5,0,G);cone(.32,.25,0x2b2b2b,0,2.82,0,G,4).rotation.y=Math.PI/4}
+ if(t==='bangku'){box(1.8,.08,.5,0xa8743f,0,.45,0,G);box(1.8,.4,.06,0xa8743f,0,.75,-.24,G);for(const x of[-.8,.8])box(.08,.45,.45,0x6b4423,x,.22,0,G)}
+ if(t==='orang'){cyl(.05,.05,1.9,0x8b5a2b,0,.95,0,G);box(1.4,.06,.06,0x8b5a2b,0,1.35,0,G);box(.55,.6,.25,0xd8322a,0,1.25,0,G);ball(.22,0xe2c46e,0,1.75,0,G);cyl(.02,.42,.22,0xe2c46e,0,1.95,0,G,10)}
+ if(t==='papan'){for(const x of[-.9,.9])cyl(.07,.07,1.6,0x6b4423,x,.8,0,G);box(2.1,.7,.08,lamb(signT('🌾 Ladang '+(S.farmName||'Saya'),'#7a4a26','#fff')),0,1.3,.05,G)}
+ if(t==='pisang'){cyl(.12,.16,1.6,0x9bb83a,0,.8,0,G,8);for(let i=0;i<6;i++){const a=i/6*Math.PI*2,f=box(1.4,.04,.45,0x5faa3a,Math.cos(a)*.6,1.75,Math.sin(a)*.6,G);f.rotation.y=-a;f.rotation.z=-.5}ball(.15,0xe0c23a,.15,1.4,0,G)}
+ if(t==='rambutan'){cyl(.18,.24,1.4,0x6b4423,0,.7,0,G);ball(1.1,0x3f8f3a,0,2.1,0,G);for(let i=0;i<10;i++)ball(.09,0xd62828,Math.cos(i*1.3)*.95,1.9+((i*13)%5)*.12,Math.sin(i*1.3)*.95,G)}
+ if(t==='kelapa')coconutG(G,.2);
+ if(t==='telaga'){cyl(.85,.9,.7,0x9e9e9e,0,.35,0,G,14);cyl(.65,.65,.72,0x2a6f96,0,.37,0,G,14);for(const x of[-.85,.85])cyl(.05,.05,1.8,0x6b4423,x,1.1,0,G);const r=box(2,.06,1.2,0x8f3320,0,2,0,G);r.rotation.z=0;cyl(.12,.1,.2,0x8b5a2b,0,1.3,0,G)}
+ if(t==='gerbang'){for(const x of[-1.9,1.9])cyl(.14,.14,3.2,0x6b4423,x,1.6,0,G);box(4.6,.25,.3,0x8b5a2b,0,3.2,0,G);box(3,.7,.08,lamb(signT('Selamat Datang','#7a4a26','#fff')),0,2.6,.1,G)}
+ if(t==='wakaf'){for(const x of[-1.6,1.6])for(const z of[-1.6,1.6])cyl(.1,.1,2.6,0x6b4423,x,1.3,z,G);box(3.6,.15,3.6,0xa8743f,0,.6,0,G);gable(0,3.2,0,4.4,4.2,lamb(roofT),G)}}
+const DEC=[];
+const LAMPS=[];const DI=[];
+function placeDecor(d,i){const D=DECOR[d.t],G=grp(d.x,d.z);G.rotation.y=d.r*Math.PI/2;decorMesh(d.t,G);G.userData.di=i;
+ if(d.t==='lampu'){const L=new THREE.PointLight(0xffd27a,0,16,1.6);L.position.set(0,2.3,0);G.add(L);LAMPS.push(L);const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:glowT,color:0xffe08a,transparent:true,depthWrite:false,opacity:0}));halo.scale.set(2.2,2.2,1);halo.position.set(0,2.5,0);G.add(halo);L.userData.halo=halo}
+ const sw=d.r%2?D.d:D.w,sd=d.r%2?D.w:D.d;DEC[i]={g:G,b:D.solid?block(d.x,d.z,sw/2,sd/2):null};
+ if(DI[i])DI[i].dead=true;if(FRUIT[d.t]||d.t==='bangku'||d.t==='wakaf'){const o={x:d.x,z:d.z+Math.max(sw,sd)/2+.6,r:2.2,deco:i,prim:()=>decoPrim(i),chips:()=>[]};DI[i]=o;I.push(o)}}
+const glowT=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),r=g.createRadialGradient(32,32,2,32,32,32);r.addColorStop(0,'rgba(255,240,180,1)');r.addColorStop(1,'rgba(255,220,120,0)');g.fillStyle=r;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c)})();
+function decoPrim(i){const d=S.decor[i];if(!d)return null;const D=DECOR[d.t],F=FRUIT[d.t];
+ if(F){const n=d.f||0;return n?{ic:D.ic,l:'Petik '+n,go:()=>work(D.ic,'Memetik buah',.6,'raga',()=>{const g=fit(S.inv,BEGCAP,'buah_'+d.t,n);d.f=n-g;gainXP(2);say(g?'🧺 Dipetik <b>'+g+' '+F.item+'</b>. Jual di Pasar Kering, Kedai Runcit atau gerai Mak Cik Siti.'+(d.f?'<br>🎒 Beg penuh — baki '+d.f+' masih di pokok.':''):'🎒 Beg penuh!',7)},d)}:{ic:D.ic,l:'Belum berbuah',go:()=>say(D.ic+' '+D.n+' berbuah setiap '+F.every+' hari. Datang lagi nanti.',5)}}
+ const hrs=d.t==='wakaf'?2:1;return{ic:'😌',l:'Rehat '+hrs+' jam',go:()=>{if(S.min+hrs*60>=24*60+60){say('Sudah lewat malam — pulang tidur di rumah.',4);return}work('😌','Berehat',.6,'tangan',()=>{S.min+=hrs*60;say('😌 Anda berehat '+hrs+' jam di '+D.n.toLowerCase()+'. Sekarang pukul <b>'+clock()+'</b>.',5)},d)}}}
+function nearDecor(x,z,types,r){return S.decor.some(d=>d&&types.includes(d.t)&&(d.x-x)**2+(d.z-z)**2<r*r)}
+const fp=(t,r)=>{const D=DECOR[t];return r%2?[D.d/2,D.w/2]:[D.w/2,D.d/2]};
+S.decor=S.decor||[];S.decor.forEach((d,i)=>{if(d)placeDecor(d,i)});
+let build=null;
+const ghostD=box(1,.3,1,new THREE.MeshBasicMaterial({color:0x44dd55,transparent:true,opacity:.45}),0,.16,0);ghostD.castShadow=ghostD.receiveShadow=false;ghostD.visible=false;
+const prevG=new THREE.Group();scene.add(prevG);
+function decorWhy(t,x,z,r,skip){const[hw,hd]=fp(t,r);if(Math.abs(x)>70||z-hd<-30.8||z+hd>30.4)return'Di luar kawasan kampung';
+ const ov=b=>Math.abs(x-b.x)<hw+b.w-.02&&Math.abs(z-b.z)<hd+b.d-.02;
+ if(ov(PATHS[0]))return'Atas jalan raya';
+ if(ov({x:houseBlock.x,z:houseBlock.z,w:houseBlock.w+.5,d:houseBlock.d+2}))return'Terlalu dekat rumah';
+ if(S.ents.some(E=>!isRiver(E)&&ov({x:E.x,z:E.z,w:FOOT.hw,d:FOOT.hd})))return'Dalam kawasan projek';
+ if(TREES.some(tr=>!tr.cut&&ov({x:tr.x,z:tr.z,w:.4,d:.4})))return'Ada pokok — tebang dahulu';
+ if(solid.some(b=>!b.off&&ov(b)))return'Ada halangan di situ';
+ for(let k=0;k<S.decor.length;k++){const d=S.decor[k];if(!d||k===skip)continue;if((d.t==='batu')!==(t==='batu'))continue;const[w2,d2]=fp(d.t,d.r);if(ov({x:d.x,z:d.z,w:w2,d:d2}))return'Bertindih dengan hiasan lain'}
+ return''}
+const canDecor=(t,x,z,r,skip)=>!decorWhy(t,x,z,r,skip);
+function buildStart(){if(modalOn||setup||busy||inVeh)return;closeModal();const f=camFwd();
+ build={mode:'bina',sel:Object.keys(DECOR).find(t=>S.money>=DECOR[t].rm&&S.kayu>=DECOR[t].kayu)||'batu',r:0,x:Math.round(player.position.x+f.x*4),z:Math.round(player.position.z+f.z*4)};zoom=1.3;lastChips='';buildDraw()}
+function moveCancel(){const b=build;if(!b||b.moving===undefined)return;const o=DEC[b.moving];o.g.visible=true;if(o.b)o.b.off=false;b.moving=undefined}
+function buildEnd(){moveCancel();build=null;ghostD.visible=false;clearG(prevG);$('#banner').classList.add('hide');zoom=1;lastChips='';save()}
+function buildMode(m){moveCancel();build.mode=m;lastChips='';buildDraw()}
+function buildDraw(){const b=build,D=DECOR[b.sel],[hw,hd]=fp(b.sel,b.r),active=b.mode==='bina'||(b.mode==='alih'&&b.moving!==undefined);
+ const why=active?decorWhy(b.sel,b.x,b.z,b.r,b.moving):'';const cost=b.mode==='bina'&&(S.money<D.rm?'Duit tak cukup ('+rm(D.rm)+')':S.kayu<D.kayu?'Perlu '+D.kayu+' 🪵 kayu (ada '+S.kayu+') — tebang pokok':'');
+ b.ok=active&&!why&&!cost;
+ ghostD.visible=active;ghostD.scale.set(hw*2,1,hd*2);ghostD.position.set(b.x,.16,b.z);ghostD.material.color.setHex(b.ok?0x44dd55:0xee3333);
+ clearG(prevG);if(active){const G=grp(0,0,prevG);G.position.set(b.x,0,b.z);G.rotation.y=b.r*Math.PI/2;decorMesh(b.sel,G)}
+ const tab=(m,l)=>'<button data-m="'+m+'" class="'+(b.mode===m?'pri':'')+'">'+l+'</button>';
+ let info='';if(b.mode==='bina')info=D.ic+' <b>'+D.n+'</b> · '+rm(D.rm)+(D.kayu?' + '+D.kayu+'🪵':'')+'<br><small style="opacity:.9">Fungsi: '+D.use+'</small><br>'+(why||cost?'<span style="color:#ff8a80">✗ '+(why||cost)+'</span>':'<span style="color:#7be07b">✓ Boleh letak</span>');
+ else if(b.mode==='alih')info=b.moving===undefined?'👆 Ketuk hiasan yang mahu dialih.':D.ic+' <b>'+D.n+'</b> — '+(why?'<span style="color:#ff8a80">✗ '+why+'</span>':'<span style="color:#7be07b">✓ Boleh letak di sini (percuma)</span>');
+ else info='👆 Ketuk hiasan untuk buang (dapat semula separuh harga).';
+ if(active)info+='<br><small style="opacity:.85">👆 Ketuk tanah atau seret jari untuk gerakkan kotak.</small>';
+ const bn=$('#banner');bn.classList.remove('hide');
+ bn.innerHTML='<div class="r" style="margin-bottom:6px">'+tab('bina','🧱 Bina')+tab('alih','✥ Alih')+tab('buang','🗑️ Buang')+'<button id="bdEnd" class="ok">✓ Siap</button></div><p style="margin:2px 0 6px">'+info+'</p>'+
+  (active?'<div class="r"><button id="bdRot">↻ Putar</button><button class="pri" id="bdOk" '+(b.ok?'':'disabled')+'>✓ Letak</button>'+(b.mode==='alih'?'<button id="bdNo">✕ Batal alih</button>':'')+'</div>':'');
+ bn.querySelectorAll('[data-m]').forEach(e=>e.onclick=()=>buildMode(e.dataset.m));
+ const on=(id,f)=>{const e=$(id);if(e)e.onclick=f};
+ on('#bdRot',()=>{b.r=(b.r+1)%4;buildDraw()});on('#bdOk',buildPlace);on('#bdEnd',buildEnd);on('#bdNo',()=>{moveCancel();buildDraw()})}
+function buildPlace(){const b=build,D=DECOR[b.sel];if(!b.ok)return;
+ if(b.mode==='alih'){const i=b.moving,d=S.decor[i],o=DEC[i];scene.remove(o.g);Object.assign(d,{x:b.x,z:b.z,r:b.r});placeDecor(d,i);clearArea(b.x,b.z,...fp(d.t,d.r));b.moving=undefined;save();say('✥ <b>'+D.n+'</b> dialihkan ke tempat baru.',4,'🔨 MOD BINA');buildDraw();return}
+ pay(-D.rm,'Bina '+D.n);S.kayu-=D.kayu;const d={t:b.sel,x:b.x,z:b.z,r:b.r};S.decor.push(d);placeDecor(d,S.decor.length-1);clearArea(b.x,b.z,...fp(b.sel,b.r));gainXP(1);
+ if(b.sel==='pagar'||b.sel==='batu'){if(b.r%2)b.z+=2;else b.x+=2}b.fx=b.x;b.fz=b.z;save();buildDraw()}
+function buildPick(i){const b=build,d=S.decor[i];if(!d)return;if(b.mode==='buang'){buildRemove(i);return}
+ if(b.mode==='alih'&&b.moving===undefined){const o=DEC[i];o.g.visible=false;if(o.b)o.b.off=true;Object.assign(b,{moving:i,sel:d.t,r:d.r,x:d.x,z:d.z,fx:d.x,fz:d.z});buildDraw()}}
+function buildRemove(i){const d=S.decor[i];if(!d)return;const D=DECOR[d.t],o=DEC[i];scene.remove(o.g);if(o.b)o.b.off=true;if(DI[i])DI[i].dead=true;S.decor[i]=null;const back=Math.round(D.rm*5)/10;pay(back,'Buang '+D.n);say('🗑️ '+D.n+' dibuang. Dapat semula '+rm(back)+'.',4,'🔨 MOD BINA');save();buildDraw()}
+function buildChips(){if(build.mode!=='bina')return[];return Object.keys(DECOR).map(t=>{const D=DECOR[t];return{l:D.ic+' '+D.n+' · '+rmS(D.rm)+(D.kayu?' +'+D.kayu+'🪵':''),on:build.sel===t,go:()=>{build.sel=t;buildDraw()}}})}
+
+/* ================= NAVIGASI & TUTORIAL ================= */
+let nav=null;
+function setNav(n,x,z){nav=n?{n,x,z}:null;$('#navB').classList.toggle('hide',!nav)}
+function places(){const P=[['🏠 Rumah',HOME.x,HOME.z],['🧺 Gerai Mak Cik Siti',4,-4.6],['🎣 Tempat memancing',8,30.6]];
+ S.ents.forEach(E=>P.push([TYPES[E.t].ic+' '+TYPES[E.t].n,E.x,isRiver(E)?30.2:E.z+FOOT.hd+.6]));
+ P.push(['🛒 Kedai Runcit (pekan)',SHOPX.runcit,-38.6],['🚲 Kedai Kenderaan (pekan)',SHOPX.motor,-38.6],['🧑‍🌾 Kedai Pertanian (pekan)',SHOPX.agri,-38.6],['🩺 Klinik Veterinar (pekan)',SHOPX.vet,-38.6],['👕 Butik Ceria (pekan)',SHOPX.butik,-38.6],['🏠 Kontraktor Rumah (pekan)',SHOPX.rumah,-38.6],['🐟 Pasar Basah (borong)',MKT.basah,-38.6],['🥬 Pasar Kering (borong)',MKT.kering,-38.6]);return P}
+function navChips(){return[{head:'🧭 Pilih destinasi<small>Anak panah di bawah kotak tugas akan tunjuk arah & jarak</small>',l:'✕ Tutup',go:()=>{trayMode=''}}].concat(places().map(([n,x,z])=>{const d=Math.round(Math.hypot(x-player.position.x,z-player.position.z));return{l:n+' · '+d+' m',go:()=>{setNav(n,x,z);trayMode='';say('🧭 Navigasi ke <b>'+n+'</b> ('+d+' m). Ikut anak panah kuning.',5)}}}))}
+function nearestOf(list){let b=null,bd=1e9;list.forEach(o=>{const d=dist2(o.x,o.z);if(d<bd){bd=d;b=o}});return b}
+const TUT=[
+ {id:'tebas',t:'Tebas 1 semak',h:'Ketuk <b>semak hijau kecil</b> di tanah (atau dekati dan tekan GUNA). Semak tempat ular & nyamuk — kawasan bersih lebih selamat.',tg:()=>{const b=nearestOf(BUSH.filter(b=>b.visible).map(b=>b.position));return b&&['🌿 Semak terdekat',b.x,b.z]}},
+ {id:'tebang',t:'Tebang 1 pokok',h:'Ketuk sebatang <b>pokok</b>. Watak menebang dengan kapak dan anda dapat 🪵 <b>kayu</b> untuk membina pagar & bangku dalam 🔨 Mod Bina.',tg:()=>{const t=nearestOf(TREES.filter(t=>!t.cut));return t&&['🌳 Pokok terdekat',t.x,t.z]}},
+ {id:'projek',t:'Pilih projek pertama & tapaknya',h:'Tekan <b>kotak tugas</b> ini untuk pilih projek (percuma). Kemudian ketuk tanah untuk alih kotak tapak — tekan <b>Batal</b> jika mahu pilih semula.',act:()=>projModal(true)},
+ {id:'siap',t:'Siapkan persediaan projek',h:'Pergi ke tapak yang ada ikon 📘 dan tekan <b>GUNA</b> untuk setiap langkah SOP.',tg:()=>{const E=S.ents[0];return E&&['📘 Tapak projek',E.x,isRiver(E)?30.2:E.z+FOOT.hd+.6]}},
+ {id:'kerja',t:'Buat kerja pertama di projek',h:'Kebun: ketuk batas → <b>Tanam</b>, kemudian <b>Siram</b>. Ternakan: beli stok (butang bawah) → <b>Beri makan</b>.',tg:()=>{const E=S.ents[0];return E&&['Projek anda',E.x,isRiver(E)?30.2:E.z]}},
+ {id:'jualSiti',t:'Jual hasil di Gerai Mak Cik Siti',h:'Tunggu hasil (tidur di rumah selepas 6 petang untuk ke esok), atau <b>pancing ikan</b> di sungai. Kemudian jual di gerai Mak Cik Siti.',tg:()=>['🧺 Gerai Mak Cik Siti',4,-4.6]},
+ {id:'basikal',t:'Beli basikal di pekan',h:'Ikut jalan raya ke <b>timur</b> (ikut 🧭 anak panah & papan tanda). Kedai Kenderaan jual basikal RM 80 — ia menunggu di depan kedai.',tg:()=>['🚲 Kedai Kenderaan',SHOPX.motor,-38.6]},
+ {id:'runcit',t:'Jual sayur atau telur di Kedai Runcit',h:'Kedai Runcit di pekan beli <b>sayur & telur</b> dan jual <b>beg lebih besar</b>. Bawa hasil ke sana.',tg:()=>['🛒 Kedai Runcit',SHOPX.runcit,-38.6]},
+ {id:'borong',t:'Jual di Pasar Borong dengan kenderaan',h:'Isi raga basikal, kayuh ke <b>barat</b> hujung jalan. 🐟 <b>Pasar Basah</b>: ikan, udang, telur, susu. 🥬 <b>Pasar Kering</b>: sayur & kayu. Harga <b>85% harga pasaran</b> — paling tinggi! Tekan GUNA dari atas basikal.',tg:()=>['🐟 Pasar Borong',(MKT.basah+MKT.kering)/2,-38.6]}];
+const tutOn=()=>S.tut<TUT.length;
+function tutShow(){if(!tutOn()){setNav(null);return}const T=TUT[S.tut],g=T.tg&&T.tg();if(g)setNav(g[0],g[1],g[2]);else setNav(null);const k=$('#task');k.animate&&k.animate([{transform:'scale(1)'},{transform:'scale(1.04)'},{transform:'scale(1)'}],{duration:500,iterations:2})}
+function tutEvent(id){if(!tutOn()||TUT[S.tut].id!==id)return;const T=TUT[S.tut];S.tut++;pay(10,'Ganjaran tutorial');gainXP(5);save();
+ if(!tutOn()){pay(50,'Tamat tutorial');setNav(null);setTimeout(()=>say('🎓 <b>Tutorial tamat!</b> Ganjaran RM 60 diberi. Kini anda tahu semua asas: tebas, tebang, projek, jual di gerai, pekan, Kedai Runcit dan Pasar Borong. Selamat bertani! 🌾',14),1600);return}
+ toast('✅ '+T.t+' · +RM 10');setTimeout(tutShow,1800)}
+function tutCheck(){if(!tutOn())return;const id=TUT[S.tut].id;
+ if(id==='projek'&&S.ents.length)tutEvent('projek');else if(id==='siap'&&S.ents.some(E=>E.st==='on'))tutEvent('siap');
+ else if(id==='kerja'&&S.ents.some(E=>E.st==='on'&&(E.t==='kebun'?E.beds.some(b=>b.st==='tanam'):stockN(E)>0&&E.fed)))tutEvent('kerja');
+ else if(id==='basikal'&&S.veh.moto.own)tutEvent('basikal')}
+$('#task').addEventListener('click',()=>{if(build||setup)return;if(tutOn()){const T=TUT[S.tut];if(T.act&&!S.ents.length){T.act();return}tutShow()}else if(nav)say('🧭 Menuju <b>'+nav.n+'</b>.',3)});
+$('#bNav').addEventListener('click',()=>{if(build||setup)return;trayMode=trayMode==='nav'?'':'nav';lastChips=''});
+$('#navX').addEventListener('click',()=>setNav(null));
+function navTick(){if(!nav)return;const p=inVeh?inVeh.g.position:player.position,dx=nav.x-p.x,dz=nav.z-p.z,d=Math.hypot(dx,dz);
+ if(d<5){const n=nav.n;setNav(null);toast('📍 Sampai: '+n);return}
+ const F=inVeh?vf(inVeh.h):camFwd(),Rt={x:-F.z,z:F.x},a=Math.atan2(dx*Rt.x+dz*Rt.z,dx*F.x+dz*F.z);
+ $('#navA').style.transform='rotate('+a+'rad)';$('#navT').textContent=nav.n+' · '+Math.round(d)+' m'}
+
+/* ================= MODAL (menu sahaja) ================= */
+let modalOn=false;
+function modal(h,noClose){$('#box').innerHTML=(noClose?'':'<button class="close" data-a="close" aria-label="Tutup">✕</button>')+h;$('#modal').classList.add('on');modalOn=true;clearInput()}
+function closeModal(){$('#modal').classList.remove('on');modalOn=false;fishS=null;refreshAll();lastChips=''}
+const A={};
+$('#box').addEventListener('click',ev=>{const b=ev.target.closest('[data-a]');if(!b||b.disabled)return;const[f,...args]=b.dataset.a.split(':');if(f==='close')closeModal();else if(A[f])A[f](...args)});
+$('#modal').addEventListener('click',ev=>{if(ev.target.id==='modal'&&!fishS&&$('#box [data-a=close]'))closeModal()});
+const bar=v=>'<div class="bar"><i style="width:'+Math.max(0,Math.min(100,v))+'%"></i></div>';
+A.fire=i=>{const E=S.ents[i];if(E.owed){pay(-Math.round(E.owed*10)/10,'Gaji akhir pekerja '+TYPES[E.t].n);E.owed=0}E.worker=false;refreshEnt(+i);closeModal();say('Pekerja diberhentikan.')};
+function projModal(first){const have=S.ents.map(e=>e.t);
+ modal('<h2>'+(first?'Pilih projek pertama':'🏗️ Projek baru')+'</h2><p>'+(first?'Fokus pada satu dahulu supaya mudah belajar. Projek pertama <b>percuma</b>!':'Duit anda: <b class="price">'+rm(S.money)+'</b>')+'</p>'+
+ (ORDER.filter(t=>!have.includes(t)).map(t=>{const T=TYPES[t],c=first?0:T.cost;return'<div class="card"><h4>'+T.ic+' '+T.n+' <small>· '+T.diff+'</small></h4><small>'+T.desc+'</small><p style="margin-top:6px"><button class="pri" data-a="startProj:'+t+':'+(first?1:0)+'" '+(S.money<c?'disabled':'')+'>'+(first?'Pilih ini':'Bina ('+rm(c)+')')+'</button></p></div>'}).join('')||'<p>Anda sudah ada semua projek. Hebat!</p>'),first)}
+A.startProj=(t,f)=>{const first=f==='1',T=TYPES[t];closeModal();
+ if(T.river){if(!first){if(S.money<T.cost){say('💸 Duit tak cukup');return}pay(-T.cost,'Bina '+T.n)}newEnt(t,T.river,34);goTo(T.river,30.2);say('🔨 Tapak <b>'+T.n+'</b> di sungai depan rumah. Anda berjalan ke tebing — tekan <b>GUNA</b> untuk setiap langkah persediaan.',10);return}
+ setupStart(t,first)};
+function farmModal(){modal('<h2>📋 Ladang Saya</h2><p>Duit: <b class="price">'+rm(S.money)+'</b> · Pengurus Tahap '+S.lvl+'</p>'+
+ (S.ents.length?S.ents.map((E,i)=>{const T=TYPES[E.t],ic=entIcon(E);return'<div class="card"><h4>'+T.ic+' '+T.n+' · Tahap '+E.lvl+' '+(ic||'✅')+'</h4><small>'+skillTag(E.t)+' · '+(E.st!=='on'?'Persediaan '+E.step+'/'+T.steps.length:
+  (E.t==='kebun'?E.beds.filter((b,k)=>k<cap(E)&&b.st==='tanam').length+'/'+cap(E)+' batas ditanam':stockN(E)+' '+T.unit+' · kesihatan '+E.hp+'%')+' · stor '+load(E.store)+'/'+scap(E)+' · '+(E.worker?'👷 semak '+(S.day-E.check)+' hari lalu':'tiada pekerja'))+'</small></div>'}).join(''):'<p>Belum ada projek.</p>')+
+ '<div class="note">Ikon atas projek: ❗ perlu dijaga · 🧺 hasil sedia · 📋 perlu semakan · 🤒 sakit · 🌱 batas perlu diurus · 🛒 beli stok · 📘 persediaan</div>'+
+ '<p style="margin-top:10px"><button class="pri bigbtn" data-a="proj">🏗️ Mula projek baru</button></p>')}
+A.proj=()=>projModal(false);
+function sources(){const s=[{n:'🎒 Beg',o:S.inv}];VEH.forEach(v=>{if(S.veh[v.id].own&&(inVeh===v||dist2(v.g.position.x,v.g.position.z)<100))s.push({n:VSHOP[v.id].ic+' '+v.name,o:vcargo(v)})});return s}
+const sopBook=()=>modal('<h2>📚 Buku SOP</h2><h3>🥬 Batas sayur</h3><p>• '+BED.semak[2]+'</p><p>• '+BED.bersih[2]+'</p>'+Object.keys(CROPS).map(c=>'<p>• <b>'+CROPS[c].n+':</b> kedalaman '+CROPS[c].dep+', jarak '+CROPS[c].sp+', matang '+CROPS[c].real+'.</p>').join('')+
+ ORDER.map(t=>{const T=TYPES[t];return'<h3>'+T.ic+' '+T.n+'</h3>'+T.steps.map(s=>'<p>• <b>'+s.t+':</b> '+s.say+'</p>').join('')+(T.feedSay?'<p>• <b>Beri makan:</b> '+T.feedSay+'</p><p>• <b>'+T.clean+':</b> '+T.cleanSay+'</p>':'')+T.tips.map(x=>'<p>• '+x+'</p>').join('')}).join('')+NOTE());
+let bTab='baju';
+function butik(){modal('<h2>👕 Butik Ceria</h2><p>Duit anda: <b class="price">'+rm(S.money)+'</b></p><div class="tabs">'+Object.keys(CATS).map(c=>'<button data-a="btab:'+c+'" class="'+(c===bTab?'pri':'')+'">'+CATS[c]+'</button>').join('')+'</div>'+
+ Object.keys(CL).filter(k=>CL[k].c===bTab).map(k=>{const c=CL[k],own=S.owned.includes(k),on=S.wear[c.c]===k;
+  return'<div class="row"><span>'+c.n+(c.fun?' <small>😂</small>':'')+'</span><span class="r">'+(on?'✅ Dipakai':own?'<button data-a="wear:'+k+'">Pakai</button>':'<span class="price">'+rm(c.p)+'</span><button class="pri" data-a="buyCl:'+k+'" '+(S.money<c.p?'disabled':'')+'>Beli & pakai</button>')+'</span></div>'}).join(''))}
+A.btab=c=>{bTab=c;butik()};
+A.wear=k=>{S.wear[CL[k].c]=k;dress();save();toast('👕 Dipakai: '+CL[k].n);butik()};
+A.buyCl=k=>{const c=CL[k];if(S.money<c.p)return;pay(-c.p,'Beli '+c.n);S.owned.push(k);A.wear(k)};
+function bagModal(){const ks=Object.keys(S.inv);let h='<h2>🎒 Beg ('+load(S.inv)+'/'+BEGCAP+')</h2>'+(ks.length?ks.map(k=>'<div class="row"><span>'+nameOf(k)+'</span><b>×'+S.inv[k]+'</b></div>').join(''):'<p>Beg kosong.</p>');
+ VEH.forEach(v=>{if(!S.veh[v.id].own)return;const o=vcargo(v),k2=Object.keys(o);h+='<h3>'+VSHOP[v.id].ic+' '+v.name+' ('+load(o)+'/'+vcap(v)+')</h3>'+(k2.length?k2.map(k=>'<div class="row"><span>'+nameOf(k)+'</span><b>×'+o[k]+'</b></div>').join(''):'<p>Kosong.</p>')});
+ if(HOUSES[S.house||0].store){const o=S.hstore,k2=Object.keys(o);h+='<h3>🏠 Stor rumah ('+load(o)+'/'+HOUSES[S.house].store+')</h3>'+(k2.length?k2.map(k=>'<div class="row"><span>'+nameOf(k)+'</span><b>×'+o[k]+'</b></div>').join(''):'<p>Kosong.</p>')}
+ modal(h+'<p class="note">Benih tidak mengambil ruang. Telur = 0.1 unit sebiji, susu = 0.5 unit seliter, lain-lain 1 unit.</p><p>⭐ Pengurus Tahap '+S.lvl+' · XP '+S.xp+'/'+S.lvl*50+'</p>')}
+function recModal(){const inc=S.log.filter(l=>l.a>0).reduce((a,l)=>a+l.a,0),exp=S.log.filter(l=>l.a<0).reduce((a,l)=>a-l.a,0);
+ modal('<h2>📒 Rekod Kewangan</h2><p>🍲 Jimat belanja dapur (makan hasil sendiri): <b class="price">'+rm(S.jimat||0)+'</b></p><p>Masuk: <b class="price">'+rm(inc)+'</b> · Keluar: <b class="price">'+rm(exp)+'</b> · Untung: <b class="price">'+rm(inc-exp)+'</b></p>'+
+ (S.log.length?S.log.slice(0,30).map(l=>'<div class="row"><span>Hari '+l.d+' · '+l.t+'</span><span class="price">'+(l.a>0?'+':'')+l.a.toFixed(2)+'</span></div>').join(''):'<p>Belum ada rekod.</p>'))}
+function helpModal(){modal('<h2>❓ Bantuan · RealFarm</h2><h3>Bergerak</h3><p>👆 <b>Ketuk tanah</b> = jalan ke situ. <b>Seret</b> 1 jari = pusing kamera. <b>Cubit</b> 2 jari = zum. 🏃 <b>LARI</b> = hidup/mati.</p>'+
+ '<h3>Bekerja</h3><p>Dekati sesuatu, tekan <b>GUNA</b> — watak terus buat kerja. Pilihan lain (jenis benih, beli stok, naik taraf) muncul sebagai butang kecil di bawah kiri. Kotak di bawah kiri terangkan apa yang berlaku.</p>'+
+ '<h3>Kebun</h3><p>👆 <b>Ketuk batas tanah</b> — watak berjalan dan buat langkah seterusnya: bersihkan → gembur → semai → siram setiap hari → tuai.</p>'+
+ '<h3>Pekerja</h3><p>Buat kerja sendiri dahulu sehingga <b>🎓 Mahir</b> (lihat ℹ️ Info projek). Kemudian upah pekerja di Kedai Pertanian. Gaji dibayar setiap hujung bulan (1 bulan = '+BULAN+' hari). Bila ada <b>2 pekerja</b>, butang <b>⚡ Kerjakan semua batas</b> dibuka.</p>'+'<h3>Simpanan</h3><p>🎒 Beg hanya <b>'+BEGCAP+' unit</b>. Stor projek ada had — lebihan rosak. Beli 🚲 basikal (raga 20 → boleh naik taraf hingga 70) atau 🛻 pickup (150) di Kedai Kenderaan, pekan.</p>'+
+ '<h3>Tempat</h3><p>🧺 Gerai Mak Cik Siti dekat rumah. 🏙️ Pekan jauh ke timur. 🚚 Pasar Borong jauh ke barat (85% harga pasaran, perlu kenderaan). 🐟 Sangkar di sungai depan rumah.</p>'+NOTE()+
+ '<p style="margin-top:10px">'+(tutOn()?'<button data-a="skipTut">⏭ Langkau tutorial</button> ':'<button data-a="redoTut">📖 Ulang tutorial</button> ')+'<button data-a="reset">🔄 Main semula dari awal</button></p>')}
+A.skipTut=()=>{S.tut=99;setNav(null);closeModal();save();say('⏭ Tutorial dilangkau. Gunakan 🧭 untuk navigasi.',5)};A.redoTut=()=>{S.tut=0;closeModal();tutShow()};
+A.reset=()=>{try{localStorage.removeItem(SAVE)}catch(e){}location.reload()};
+$('#bBuild').onclick=()=>{if(build)buildEnd();else buildStart()};$('#bHelp').onclick=helpModal;$('#bBag').onclick=bagModal;$('#bRec').onclick=recModal;$('#bFarm').onclick=farmModal;
+
+/* ================= MEMANCING (mini game) ================= */
+let fishS=null;
+function fishStart(){if(load(S.inv)>=BEGCAP){say('🎒 Beg penuh! Jual atau simpan dulu sebelum memancing.');return}fishS={st:'cast',t:0,pos:0};modal('<h2>🎣 Memancing</h2><div id="fz"></div>');fishRender()}
+function fishRender(){const F=fishS,z=$('#fz');if(!F||!z)return;
+ if(F.st==='cast')z.innerHTML='<p>Lempar joran ke sungai. Ikan yang menggigit adalah <b>rawak</b> — murah atau mahal, untung nasib! 🍀</p><p style="text-align:center;font-size:44px;margin:10px 0">🎣🌊</p>'+
+  '<button class="pri bigbtn" data-a="fCast">🎣 LEMPAR</button>';
+ else if(F.st==='wait'||F.st==='bite')z.innerHTML='<p class="bigtxt" id="ftx">🌊 Menunggu ikan menggigit…</p><p style="text-align:center">Tekan <b>SENTAP</b> bila pelampung tenggelam.</p><button class="pri bigbtn" id="fBite" data-a="fBite">❗ SENTAP</button>';
+ else if(F.st==='reel'){z.innerHTML='<p><b>Tekan berulang kali</b> untuk naikkan kotak hijau. Pastikan ikan 🐟 berada dalam kotak hijau sehingga bar kuning penuh!</p><div class="reel"><div id="track"><div id="zone"></div><div id="fishI">🐟</div></div><div id="prog"><div id="progF"></div></div></div><button class="pri bigbtn" id="fHold" style="touch-action:none;min-height:80px">👆 TEKAN! TEKAN! (naik)</button>';
+  const h=$('#fHold');h.addEventListener('pointerdown',e=>{e.preventDefault();F.zv=Math.min(1.1,Math.max(F.zv,0)+.55);h.classList.add('down');setTimeout(()=>h.classList.remove('down'),80)})}
+ else if(F.st==='done')z.innerHTML=F.res+'<p style="margin-top:12px;display:flex;gap:8px"><button class="pri bigbtn" data-a="fAgain">🎣 Lagi</button><button class="bigbtn" data-a="close">Tutup</button></p>'}
+A.fCast=()=>{const F=fishS;F.st='wait';F.wait=1+Math.random()*1.8;fishRender()};
+A.fBite=()=>{const F=fishS;if(F.st==='wait'){F.wait+=.6;const t=$('#ftx');if(t)t.textContent='🤫 Sabar… tunggu pelampung tenggelam';return}
+ if(F.st!=='bite')return;const pool=POOL;let r=Math.random()*pool.reduce((a,x)=>a+x[1],0);F.fish=pool[pool.length-1][0];for(const[n,w]of pool){if(r<w){F.fish=n;break}r-=w}
+ const pr=RIVER[F.fish][0];Object.assign(F,{st:'reel',zy:.3,zv:0,zh:pr>=18?.34:.4,fy:.5,ft:.5,fv:.08+pr/160,tt:0,prog:.4,hold:false});fishRender()};
+A.fAgain=()=>{if(load(S.inv)>=BEGCAP){toast('🎒 Beg penuh!');return}fishS={st:'cast',t:0,pos:0};fishRender()};
+function fishEnd(html){fishS.st='done';fishS.res=html;fishRender()}
+function fishTick(dt){const F=fishS;if(!F)return;F.t+=dt;
+ if(F.st==='cast'){F.pos=(1-Math.cos(F.t*1.8))/2;const n=$('#needle');if(n)n.style.left=(F.pos*100)+'%'}
+ else if(F.st==='wait'){F.wait-=dt;if(F.wait<=0){F.st='bite';F.win=1.6;const t=$('#ftx');if(t){t.textContent='❗❗ Pelampung tenggelam!';t.classList.add('bite')}}}
+ else if(F.st==='bite'){F.win-=dt;if(F.win<=0)fishEnd('<p class="bigtxt">🐟💨 Ikan terlepas!</p><p style="text-align:center">Cuba lagi — tekan SENTAP lebih cepat.</p>')}
+ else if(F.st==='reel'){F.zv-=1.5*dt;F.zv*=.985;F.zy+=F.zv*dt;if(F.zy<0){F.zy=0;F.zv=0}if(F.zy>1-F.zh){F.zy=1-F.zh;F.zv=0}
+  F.tt-=dt;if(F.tt<=0){F.ft=.1+Math.random()*.8;F.tt=.8+Math.random()*1.2}const d=F.ft-F.fy;F.fy+=Math.sign(d)*Math.min(Math.abs(d),F.fv*dt*2);
+  const inside=F.fy>=F.zy-.03&&F.fy<=F.zy+F.zh+.03;F.prog+=(inside?.42:-.12)*dt;
+  const zE=$('#zone'),fE=$('#fishI'),pE=$('#progF');if(zE){zE.style.bottom=(F.zy*100)+'%';zE.style.height=(F.zh*100)+'%';fE.style.bottom=(F.fy*100)+'%';pE.style.height=(Math.max(0,Math.min(1,F.prog))*100)+'%'}
+  if(F.prog>=1){const[p,cat]=RIVER[F.fish];const ok=fit(S.inv,BEGCAP,'ikan_'+F.fish,1);gainXP(p>=18?8:4);
+   fishEnd('<p class="bigtxt">🎉 Dapat ikan '+F.fish+'!</p><p style="text-align:center">Kategori: <b class="price">'+cat+'</b> · Harga: <b class="price">'+rm(p)+'</b></p>'+(ok?'':'<p style="text-align:center">🎒 Beg penuh — ikan dilepaskan semula.</p>'))}
+  else if(F.prog<=0)fishEnd('<p class="bigtxt">💦 Ikan terlepas!</p><p style="text-align:center">Ikan '+F.fish+' berjaya lari. Cuba lagi!</p>')}}
+
+/* ================= PILIH TAPAK ================= */
+let setup=null;
+const ghostMat=new THREE.MeshBasicMaterial({color:0x44dd55,transparent:true,opacity:.45});
+const ghost=box(FOOT.hw*2,.25,FOOT.hd*2,ghostMat,0,.15,0);ghost.castShadow=ghost.receiveShadow=false;ghost.visible=false;
+function placeWhy(x,z){const hw=FOOT.hw,hd=FOOT.hd;if(x-hw<-70||x+hw>70||z-hd<-29||z+hd>28.8)return'Di luar kawasan kampung';
+ const ov=(b,m=0)=>Math.abs(x-b.x)<hw+b.w+m&&Math.abs(z-b.z)<hd+b.d+m;
+ if(PATHS.some(b=>ov(b)))return'Atas jalan / laluan';
+ if(Math.abs(x-HOME.x)<hw+5&&Math.abs(z-(HOME.z-4))<hd+6)return'Terlalu dekat dengan rumah';
+ if(S.ents.some(E=>!isRiver(E)&&Math.abs(x-E.x)<2*hw+3&&Math.abs(z-E.z)<2*hd+3))return'Terlalu dekat dengan projek lain';
+ if(Math.abs(x-4)<hw+4&&Math.abs(z+7)<hd+4)return'Terlalu dekat gerai Mak Cik Siti';
+ if(TREES.some(t=>!t.cut&&ov({x:t.x,z:t.z,w:.4,d:.4})))return'Ada pokok — tebang dahulu (🪓)';
+ if(solid.some(b=>!b.off&&ov(b)))return'Ada bangunan / halangan';
+ if(S.decor.some(d=>d&&Math.abs(x-d.x)<hw+1&&Math.abs(z-d.z)<hd+1))return'Ada hiasan di situ';
+ return''}
+const canPlace=(x,z)=>!placeWhy(x,z);
+function setupStart(t,first){setup={t,first,x:0,z:0};let best=[8,12],bd=1e9;const px=player.position.x,pz=player.position.z;
+ for(let x=-60;x<=60;x+=2)for(let z=-22;z<=22;z+=2){if(!canPlace(x,z))continue;const d=(x-px)**2+(z-pz)**2;if(d<bd){bd=d;best=[x,z]}}setup.x=best[0];setup.z=best[1];
+ ghost.visible=true;zoom=1.7;setupDraw()}
+function setupDraw(){const why=placeWhy(setup.x,setup.z),ok=!why;setup.ok=ok;ghost.position.set(setup.x,.15,setup.z);ghostMat.color.setHex(ok?0x44dd55:0xee3333);
+ const T=TYPES[setup.t],b=$('#banner');b.classList.remove('hide');
+ b.innerHTML='<h3>'+T.ic+' Pilih tapak '+T.n+'</h3><p>Ketuk tanah di mana-mana untuk alih kotak. '+(ok?'<b style="color:#7be07b">✓ Boleh letak di sini</b>':'<b style="color:#ff7a7a">✗ '+why+'</b>')+'</p>'+
+ '<div class="r"><button id="sNo">✕ Batal</button><button id="sHere">📍 Depan saya</button><button class="pri" id="sOk" '+(ok?'':'disabled')+'>✓ Letak'+(setup.first?'':' ('+rm(T.cost)+')')+'</button></div>';
+ $('#sHere').onclick=()=>{const f=camFwd();setup.x=Math.round(player.position.x+f.x*(FOOT.hd+3));setup.z=Math.round(player.position.z+f.z*(FOOT.hd+3));setupDraw()};
+ $('#sOk').onclick=setupConfirm;if($('#sNo'))$('#sNo').onclick=()=>setupEnd(true)}
+function setupEnd(c){const f=setup&&setup.first;setup=null;ghost.visible=false;$('#banner').classList.add('hide');zoom=1;if(c===true)say(f?'✕ Pemilihan tapak dibatalkan. Tekan <b>kotak tugas</b> (atas) bila mahu pilih projek semula.':'✕ Pemilihan tapak dibatalkan. Duit tidak ditolak.',7)}
+function setupConfirm(){if(!setup.ok)return;const T=TYPES[setup.t];if(!setup.first){if(S.money<T.cost){toast('Duit tak cukup');return}pay(-T.cost,'Bina '+T.n)}
+ const x=setup.x,z=setup.z;newEnt(setup.t,x,z);setupEnd();goTo(x,z+FOOT.hd+.6);
+ say('📍 Tapak <b>'+T.n+'</b> ditanda. Anda berjalan ke tapak — tekan <b>GUNA</b> untuk setiap langkah persediaan.',10)}
+function intro(){modal('<p style="text-align:center;font-size:34px;font-weight:700;color:#ffd23f;margin:0 0 4px;letter-spacing:.5px">🌾 RealFarm</p><p style="text-align:center;opacity:.85;margin:0 0 10px">Simulasi ladang Malaysia — belajar bertani cara sebenar</p><h2>Selamat pulang ke kampung! 🏡</h2><p>Selepas bertahun bekerja di bandar, anda pulang ke rumah pusaka arwah atuk. Tanah di sekelilingnya sudah lama terbiar dan bersemak, dan sungai di depan rumah masih jernih.</p><p>Tugas anda: <b>hidupkan semula tanah ini</b> — mula kecil, belajar cara yang betul, kemudian kembangkan sehingga anda jadi <b>pengurus ladang</b>.</p><p>Tutorial akan bimbing anda langkah demi langkah. Tekan <b>kotak tugas 📖</b> di atas bila-bila masa untuk ulang petunjuk, dan 🧭 untuk navigasi.</p><p style="margin-top:12px"><button class="pri bigbtn" data-a="first">▶ Mula tutorial</button></p>',true)}
+A.first=()=>{closeModal();S.tut=0;tutShow()};
+
+/* ================= HARI BARU ================= */
+function goHome(){if(inVeh)exitVeh(true);busy=null;player.position.set(HOME.x,0,HOME.z);player.rotation.y=0;target=null;pending=null;marker.visible=false;yaw=Math.PI*.15}
+function newDay(msg){S.day++;S.min=6*60;goHome();S.ents.forEach(dayEnt);
+ S.decor.forEach(d=>{const F=d&&FRUIT[d.t];if(F){d.a=(d.a||0)+1;if(d.a%F.every===0)d.f=Math.min(F.max,(d.f||0)+F.n)}});
+ const r=Math.random();S.weather=r<.55?0:r<.78?1:2;
+ if(S.weather===2)S.ents.forEach(E=>{if(E.beds)E.beds.forEach(b=>{if(b.st==='tanam')b.w=true})});
+ if(S.helper)S.helperOwed+=GAJI_HELPER/BULAN;
+ let gaji='';if((S.day-1)%BULAN===0){const W=S.ents.filter(E=>E.worker&&E.owed>0);if(W.length||S.helperOwed>0){const tot=Math.round((W.reduce((a,E)=>a+E.owed,0)+S.helperOwed)*10)/10;
+  const nW=W.length+(S.helperOwed>0?1:0);if(S.money>=tot){pay(-tot,'Gaji bulanan '+nW+' pekerja');W.forEach(E=>E.owed=0);S.helperOwed=0;gaji='<br>💵 <b>Hari gaji!</b> Anda membayar gaji bulanan '+nW+' pekerja: <b>'+rm(tot)+'</b>.'}
+  else{W.forEach(E=>{E.worker=false;E.owed=0});S.helper=false;S.helperOwed=0;gaji='<br>😟 <b>Hari gaji — duit tak cukup ('+rm(tot)+')!</b> Pekerja berhenti kerja.'}}}
+ refreshAll();save();say((msg?msg+' ':'')+'☀️ <b>Hari '+S.day+'</b> (bulan '+bulan()+') bermula · '+WEA[S.weather].join(' ')+(S.weather===2?'<br>🌧️ Hujan menyiram semua batas hari ini.':'')+gaji,gaji?12:6)}
+
+/* ================= INPUT ================= */
+const keys=new Set(),dirs={f:0,b:0,l:0,r:0};let target=null,pending=null,inVeh=null,zoom=1,run=false,yaw=Math.PI*.15,pitch=.75;
+function clearInput(){keys.clear();for(const k in dirs)dirs[k]=0;document.querySelectorAll('#dpad button').forEach(b=>b.classList.remove('down'))}
+const dist2=(x,z)=>(player.position.x-x)**2+(player.position.z-z)**2;
+function goTo(x,z,p){target={x,z:Math.min(z,30.8)};pending=p||null;marker.position.set(x,.08,target.z);marker.visible=true}
+function nearest(){if(setup||build)return null;let best=null,bd=1e9;
+ if(inVeh){const g=inVeh.g.position;for(const o of I){if(!o.main&&!o.borong)continue;const cx=o.main?o.cx:o.x,cz=o.main?o.cz:o.z,r=o.main?11:6;const d=(g.x-cx)**2+(g.z-cz)**2;if(d<r*r&&d<bd){bd=d;best=o}}return best}
+ for(const o of I){if(o.dead)continue;if(o.site&&S.ents.some(e=>e.t===o.site))continue;if(o.tree!==undefined&&TREES[o.tree].cut)continue;if(o.bush!==undefined&&!BUSH[o.bush].visible)continue;if(o.bed!==undefined&&(o.bed>=cap(S.ents[o.ent])||S.ents[o.ent].st!=='on'))continue;const d=dist2(o.x,o.z);if(d<o.r*o.r&&d<bd){bd=d;best=o}}return best}
+const ownedVeh=()=>VEH.filter(v=>S.veh[v.id].own);
+const nearVeh=()=>ownedVeh().find(v=>dist2(v.g.position.x,v.g.position.z)<(v.r+2)**2);
+function vehUse(o){if(o.borong){if(!openHrs(6,15)){say('🔒 Pasar Borong buka 6 pagi – 3 petang.');return}const M=MKTI[o.borong];sellNow(RATE.borong,M.n,'Peraih di '+M.n,M.f,'borong');if(o.borong==='kering'&&S.kayu>0)toast('🪵 Turun dari kenderaan untuk jual kayu');return}
+ const E=S.ents[o.ent],T=TYPES[E.t];E.check=S.day;const C=vcargo(inVeh);let got=[];
+ for(const k of Object.keys(E.store)){const g=fit(C,vcap(inVeh),k,E.store[k]);if(g>0){got.push(g+' '+nameOf(k));put(E.store,k,-g)}}
+ refreshEnt(o.ent);gainXP(2);say('📋 <b>'+T.n+'</b> disemak dari kenderaan'+(got.length?'. Dimuat: <b>'+got.join(', ')+'</b>':'')+(Object.keys(E.store).length?' · kenderaan penuh!':'')+(needsCare(E)?'<br>❗ Perlu dijaga — turun dan tekan GUNA.':''))}
+function use(){if(modalOn||setup||busy)return;const n=nearest();if(!n){if(!inVeh)say('Tiada apa-apa di sini. Ketuk batas, projek, gerai atau kedai.',4);return}
+ if(inVeh){vehUse(n);return}if(n.ent!==undefined)S.ents[n.ent].check=S.day;const p=n.prim();if(p&&!p.dis)p.go();else if(p)say('💸 Duit tak cukup.')}
+$('#bUse').addEventListener('click',use);
+$('#bRun').addEventListener('click',()=>{run=!run;$('#bRun').classList.toggle('on',run)});
+$('#bVeh').addEventListener('click',toggleVeh);
+let chipList=[],lastChips='';
+$('#tray').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b||b.disabled||busy)return;const c=chipList[+b.dataset.c];if(c){c.go();lastChips=''}});
+document.querySelectorAll('#dpad button').forEach(b=>{const d=b.dataset.d;
+ b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(_){}dirs[d]=1;b.classList.add('down')});
+ const off=()=>{dirs[d]=0;b.classList.remove('down')};b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('lostpointercapture',off)});
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(modalOn){if(k==='escape'&&$('#box [data-a=close]'))closeModal();if(k===' '&&fishS&&fishS.st==='reel'&&!e.repeat){fishS.zv=Math.min(1.1,Math.max(fishS.zv,0)+.55);e.preventDefault()}return}
+ if(e.repeat)return;if(k==='e')use();else if(k==='v')toggleVeh();else if(k==='shift'){run=!run;$('#bRun').classList.toggle('on',run)}else keys.add(k)});
+addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys.delete(k);if(k===' '&&fishS)fishS.hold=false});
+addEventListener('blur',clearInput);
+const kd=k=>keys.has(k);
+const inF=()=>dirs.f||kd('w')||kd('arrowup')?1:0,inB=()=>dirs.b||kd('s')||kd('arrowdown')?1:0,inL=()=>dirs.l||kd('a')||kd('arrowleft')?1:0,inR=()=>dirs.r||kd('d')||kd('arrowright')?1:0;
+function toggleVeh(){if(modalOn||setup||busy)return;if(inVeh){exitVeh();return}
+ const v=nearVeh();if(!v){say('Tiada kenderaan berdekatan.',3);return}
+ inVeh=v;target=null;pending=null;marker.visible=false;player.visible=v.kind==='moto';
+ const C=vcargo(v);let moved=[];for(const k of Object.keys(S.inv)){if(!WT(k))continue;const g=fit(C,vcap(v),k,S.inv[k]);if(g>0){moved.push(g+' '+nameOf(k));put(S.inv,k,-g)}}
+ say((v.kind==='moto'?'🚲 Naik basikal':'🛻 Naik pickup')+(moved.length?'. Barang beg dimuat ke kenderaan':'')+' · muatan <b>'+load(C)+'/'+vcap(v)+'</b><br>'+(v.kind==='moto'?'▲ kayuh':'▲ minyak')+' · ▼ brek/undur · ◀▶ stereng. GUNA dekat projek = semak & muat hasil.',7)}
+function exitVeh(silent){const v=inVeh;if(!v)return;const f=vf(v.h),rt={x:-f.z,z:f.x};let x=v.g.position.x+rt.x*(v.r+.9),z=v.g.position.z+rt.z*(v.r+.9);
+ if(blocked(x,z,.4)){x=v.g.position.x-rt.x*(v.r+.9);z=v.g.position.z-rt.z*(v.r+.9)}
+ player.position.set(x,0,z);player.rotation.set(0,v.h,0);player.visible=true;v.sp=0;inVeh=null;yaw=v.h+Math.PI;save();if(!silent)say('🚶 Turun dari '+v.name+'. Barang kekal dalam kenderaan.',4)}
+const vf=h=>({x:Math.sin(h),z:Math.cos(h)});
+{const C=R.domElement,ptr=new Map();let start=null,drag=false,pd=0,pa=0;const ray=new THREE.Raycaster(),pl=new THREE.Plane(new THREE.Vector3(0,1,0),0),v=new THREE.Vector2(),hit=new THREE.Vector3();
+ const two=()=>{const[a,b]=[...ptr.values()];return[Math.hypot(a.x-b.x,a.y-b.y),Math.atan2(b.y-a.y,b.x-a.x)]};
+ C.addEventListener('pointerdown',e=>{ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});try{C.setPointerCapture(e.pointerId)}catch(_){}
+  if(ptr.size===1){start={x:e.clientX,y:e.clientY};drag=false}else{start=null;[pd,pa]=two()}});
+ C.addEventListener('pointermove',e=>{const o=ptr.get(e.pointerId);if(!o)return;const dx=e.clientX-o.x,dy=e.clientY-o.y;o.x=e.clientX;o.y=e.clientY;
+  if(ptr.size===2){const[d,a]=two();if(pd)zoom=Math.min(2.4,Math.max(.4,zoom*pd/d));let da=a-pa;if(da>Math.PI)da-=2*Math.PI;if(da<-Math.PI)da+=2*Math.PI;if(!inVeh)yaw-=da;pd=d;pa=a;return}
+  if(start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>9)drag=true;
+  if(drag&&build&&(build.mode==='bina'||build.moving!==undefined)){const F=camFwd(),Rt={x:-F.z,z:F.x},k=.045*zoom;build.fx=(build.fx??build.x)+(dx*Rt.x-dy*F.x)*k;build.fz=(build.fz??build.z)+(dx*Rt.z-dy*F.z)*k;const nx=Math.round(build.fx),nz=Math.round(build.fz);if(nx!==build.x||nz!==build.z){build.x=nx;build.z=nz;buildDraw()}return}
+  if(drag&&!inVeh){yaw-=dx*.009;pitch=Math.min(1.35,Math.max(.25,pitch+dy*.006))}});
+ const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(ptr.size<2)pd=0;
+  if(start&&!drag&&!inVeh&&!modalOn&&!busy){v.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(v,cam);
+   if(build){const pick=build.mode==='buang'||(build.mode==='alih'&&build.moving===undefined);if(pick){const dh=ray.intersectObjects(DEC.filter(o=>o&&o.g.parent&&o.g.visible).map(o=>o.g),true)[0];if(dh){let o=dh.object;while(o&&o.userData.di===undefined)o=o.parent;if(o)buildPick(o.userData.di)}}else if(ray.ray.intersectPlane(pl,hit)){build.x=Math.round(hit.x);build.z=Math.round(hit.z);build.fx=build.x;build.fz=build.z;buildDraw()}}
+   else if(setup){if(ray.ray.intersectPlane(pl,hit)){setup.x=Math.round(hit.x);setup.z=Math.round(hit.z);setupDraw()}}
+   else{const bh=ray.intersectObjects(BEDMESH.filter(m=>m.parent&&m.parent.visible&&m.parent.parent&&m.parent.parent.visible),false)[0];
+    if(bh){const{ent,k}=bh.object.userData,P=bedPos(ent,k);
+     if(dist2(P.x,P.z)<3.2){const p=bedPrim(ent,k);if(p&&!p.dis)p.go()}else goTo(P.x,P.z+1.6,{ent,k})}
+    else{const th=ray.intersectObjects(TREES.filter(t=>!t.cut&&dist2(t.x,t.z)<900).map(t=>t.g),true)[0];let tid;if(th){let o=th.object;while(o&&o.userData.tid===undefined)o=o.parent;if(o)tid=o.userData.tid}
+     if(tid!==undefined){const t=TREES[tid];if(dist2(t.x,t.z)<4.4)cutTree(tid);else goTo(t.x+1.3,t.z+1.3,{fn:()=>cutTree(tid)})}
+     else if(ray.ray.intersectPlane(pl,hit)){const bu=BUSH.find(b=>b.visible&&Math.abs(b.position.x-hit.x)<.7&&Math.abs(b.position.z-hit.z)<.7);
+      if(bu){const id=bu.userData.bid;if(dist2(bu.position.x,bu.position.z)<1.7)clearBushAct(id);else goTo(bu.position.x+.9,bu.position.z+.9,{fn:()=>clearBushAct(id)})}else goTo(hit.x,hit.z)}}}}
+  if(ptr.size===0)start=null};
+ C.addEventListener('pointerup',up);C.addEventListener('pointercancel',e=>{ptr.delete(e.pointerId);start=null;pd=0});
+ C.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.min(2.4,Math.max(.4,zoom*(1+e.deltaY*.001)))},{passive:false})}
+const camFwd=()=>({x:-Math.sin(yaw),z:-Math.cos(yaw)});
+
+/* ================= GERAK ================= */
+function blocked(x,z,r){if(Math.abs(x)>WX-3||z<-55||z>30.9)return true;
+ const hit=b=>!b.off&&Math.abs(x-b.x)<b.w+r&&Math.abs(z-b.z)<b.d+r;if(solid.some(hit))return true;
+ for(const v of ownedVeh())if(v!==inVeh&&(x-v.g.position.x)**2+(z-v.g.position.z)**2<(v.r+r)**2)return true;return false}
+let walkT=0;
+function arrive(){if(!pending)return;const p=pending;pending=null;if(p.fn){p.fn();return}const b=bedPrim(p.ent,p.k);if(b&&!b.dis)b.go()}
+function update(dt){
+ if(busy){workTick(dt);return}
+ if(inVeh){const v=inVeh,thr=inF()-inB(),st=inL()-inR();
+  if(thr>0)v.sp+=v.acc*dt*(v.sp<0?2.5:1);else if(thr<0)v.sp-=v.acc*dt*(v.sp>0?2.5:.7);else v.sp*=1-1.2*dt;
+  if(Math.abs(v.sp)<.05&&!thr)v.sp=0;v.sp=Math.max(-v.max*.3,Math.min(v.max,v.sp));
+  v.h+=st*dt*(v.kind==='moto'?2:1.6)*Math.min(1,Math.abs(v.sp)/3)*Math.sign(v.sp);
+  const f=vf(v.h),nx=v.g.position.x+f.x*v.sp*dt,nz=v.g.position.z+f.z*v.sp*dt;
+  if(blocked(nx,nz,v.r)){if(Math.abs(v.sp)>5)toast('💥 Langgar!');v.sp*=-.25}else v.g.position.set(nx,0,nz);
+  v.g.rotation.set(0,v.h,v.kind==='moto'?-st*Math.min(.25,Math.abs(v.sp)/40):0);
+  player.position.set(v.g.position.x-f.x*.2,.32,v.g.position.z-f.z*.2);player.rotation.set(0,v.h,v.g.rotation.z);return}
+ const F=camFwd(),Rt={x:-F.z,z:F.x};const kf=inF()-inB(),kr=inR()-inL();let mx=0,mz=0;
+ if(kf||kr){target=null;pending=null;marker.visible=false;mx=F.x*kf+Rt.x*kr;mz=F.z*kf+Rt.z*kr}
+ else if(target){mx=target.x-player.position.x;mz=target.z-player.position.z;if(Math.hypot(mx,mz)<.2){target=null;marker.visible=false;mx=mz=0;arrive()}}
+ const l=Math.hypot(mx,mz),p=player.position;
+ if(l>.01){const onPath=S.decor.some(d=>d&&d.t==='batu'&&Math.abs(d.x-p.x)<1.05&&Math.abs(d.z-p.z)<1.05)||PATHS.some(b=>Math.abs(p.x-b.x)<b.w&&Math.abs(p.z-b.z)<b.d);const sp=(run?6.5:4)*(onPath?1.35:1)*dt*Math.min(1,l*4+.3)/l;mx*=sp;mz*=sp;let moved=false;
+  if(!blocked(p.x+mx,p.z,.35)){p.x+=mx;moved=true}if(!blocked(p.x,p.z+mz,.35)){p.z+=mz;moved=true}
+  if(!moved&&target){target=null;marker.visible=false;arrive()}player.rotation.y=Math.atan2(mx,mz);walkT+=dt*(run?18:12)}else walkT=0;
+ pBody.position.y=1.05+Math.abs(Math.sin(walkT))*.06;pLegs.scale.y=1-Math.abs(Math.sin(walkT))*.12}
+
+/* ================= LOOP ================= */
+const skyDay=new THREE.Color(0x9fd8f0),skyNight=new THREE.Color(0x3a5288),skyDusk=new THREE.Color(0xf2a065),skyRain=new THREE.Color(0x8a99a6),tmp=new THREE.Color();
+function lighting(){const h=hour()+(S.min>=1440?24:0),f=Math.max(0,Math.sin((h-6)/12*Math.PI)),dusk=Math.max(0,1-Math.abs(h-18.5)/1.5)+Math.max(0,1-Math.abs(h-6)/1.2);
+ tmp.copy(skyNight).lerp(S.weather===2?skyRain:skyDay,Math.min(1,f*1.6)).lerp(skyDusk,Math.min(.6,dusk*.6));
+ scene.background=tmp;scene.fog.color.copy(tmp);
+ const wet=S.weather===2?.6:S.weather===1?.8:1;hemi.intensity=(.55+.3*f)*wet+.1;sun.intensity=(.25+.75*f)*wet;
+ const a=(h-6)/12*Math.PI,p=player.position;sun.position.set(p.x+Math.cos(a)*30,5+Math.sin(Math.max(.15,Math.min(Math.PI-.15,a)))*40,p.z+15);sun.target.position.copy(p);
+ winMat.emissiveIntensity=f<.25?.9:0;const nt=f<.3;lampMat.emissiveIntensity=nt?1.4:0;LAMPS.forEach(L=>{L.intensity=nt&&L.parent&&L.parent.parent?1.8:0;if(L.userData.halo)L.userData.halo.material.opacity=nt?.75:0})}
+let lastUse='',lastNear=null;
+function hud(){const n=nearest();
+ if(n!==lastNear){lastNear=n;if(trayMode!=='nav')trayMode=''}
+ tutCheck();navTick();$('#task').classList.toggle('tut',tutOn());
+ const bl=load(S.inv);let vs='';if(inVeh){const c=load(vcargo(inVeh));vs='<span>'+VSHOP[inVeh.id].ic+' <b class="'+(c>=vcap(inVeh)?'full':'')+'">'+c+'/'+vcap(inVeh)+'</b></span>'}
+ $('#stat').innerHTML='<span>Hari <b>'+S.day+'</b> · Bln '+bulan()+'</span><span>🕐 <b>'+clock()+'</b></span><span>'+WEA[S.weather].join(' ')+'</span><span>💰 <b>'+rm(S.money)+'</b></span><span>🎒 <b class="'+(bl>=BEGCAP?'full':'')+'">'+bl+'/'+BEGCAP+'</b></span><span>🪵 <b>'+S.kayu+'</b></span>'+vs;
+ {const T=task(),h='<div class="lbl">🎯 TUGAS SETERUSNYA'+(T[2]?'<i>'+T[2]+'</i>':'')+'</div><b>'+T[0]+'</b><small>'+T[1]+'</small>';if($('#taskT').innerHTML!==h)$('#taskT').innerHTML=h}
+ let u=null;if(n&&!busy){if(inVeh)u=n.borong?[MKTI[n.borong].ic,'Jual di '+n.bname]:['📋','Semak & muat'];else{const p=n.prim();if(p)u=[p.ic,p.l]}}
+ const key=(inVeh?'v':'')+(busy?'busy':'')+(u?u.join():'none');
+ if(key!==lastUse){lastUse=key;const b=$('#bUse');b.classList.toggle('hide',!!inVeh&&!u);b.querySelector('.ic').textContent=busy?'⏳':u?u[0]:'✋';$('#useL').textContent=busy?'Sedang buat…':u?u[1]:'GUNA';b.style.opacity=u&&!busy?1:.6}
+ chipList=build?buildChips():trayMode==='nav'?navChips():(!n||inVeh||busy||!n.chips)?[]:n.chips();const ck=(build?build.mode+build.sel:'')+trayMode+chipList.map(c=>c.l+(c.dis?1:0)+(c.on?1:0)+(c.card?c.card.own:'')+(c.head||'')).join('|');
+ if(ck!==lastChips){lastChips=ck;const grid=chipList.some(c=>c.card);$('#tray').classList.toggle('grid',grid||trayMode==='nav');$('#left').classList.toggle('wide',grid||trayMode==='nav');$('#tray').classList.toggle('bar',!!build);document.body.classList.toggle('pnl',grid||trayMode==='nav');$('#left').classList.toggle('build',!!build);
+  $('#tray').innerHTML=chipList.map((c,i)=>{if(c.head)return'<div class="hd"><span>'+c.head+'</span><button data-c="'+i+'">'+c.l+'</button></div>';
+   if(c.card){const d=c.card;return'<button data-c="'+i+'" class="sc'+(d.lock?' lock':'')+'"><span class="t">'+d.ic+' '+d.n+'</span>'+
+    '<span class="own">'+(d.own?'🎒 Ada '+d.own:'&nbsp;')+'</span><span class="r"><span>Benih</span><b>'+rmS(d.cost)+'</b></span><span class="r"><span>Hasil</span><b>'+d.kg+' kg</b></span><span class="r"><span>Pasaran</span><b>RM'+d.mk+'/kg</b></span><span class="r"><span>Nilai</span><b>'+rmS(d.sell)+'</b></span><span class="r"><span>Masa</span><b>'+d.days+' hari</b></span>'+
+    '<span class="r g"><span>Jimat</span><b>+'+rmS(d.gain)+'</b></span><span class="buy">'+(d.lock?'🔒 '+d.lock+' mata':S.money<d.cost?'Duit tak cukup':'+ Beli 1')+'</span></button>'}
+   return'<button data-c="'+i+'" class="'+(c.on?'pri':'')+'" '+(c.dis?'disabled':'')+'>'+c.l+'</button>'}).join('')}
+ const nv=inVeh||nearVeh();const bv=$('#bVeh');bv.classList.toggle('hide',!nv||!!setup||!!busy);
+ bv.textContent=inVeh?'🚶 TURUN':nv?(nv.kind==='moto'?'🚲 NAIK BASIKAL':'🛻 NAIK PICKUP'):'';
+ $('#acts').style.display=build?'none':'';document.body.classList.toggle('bnr',!!(build||setup));$('#bRun').classList.toggle('hide',!!inVeh);$('#dpad').classList.toggle('hide',!inVeh);$('#left').classList.toggle('veh',!!inVeh)}
+function task(){if(build)return build.mode==='buang'?['Buang hiasan','Ketuk hiasan yang mahu dibuang. Anda dapat semula separuh harga.']:build.mode==='alih'?(build.moving!==undefined?['Alihkan '+DECOR[build.sel].n,'Ketuk tanah di tempat baru, ↻ putar jika perlu, kemudian ✓ Letak.']:['Pilih barang untuk dialih','Ketuk hiasan yang sudah dibina.']):['Bina hiasan','Pilih barang di bar bawah → ketuk tanah → ✓ Letak.'];
+ if(setup)return['Pilih tapak '+TYPES[setup.t].n,'Ketuk tanah untuk alih kotak. Hijau = boleh. Tekan ✓ Letak, atau ✕ Batal.'];
+ if(tutOn())return['📖 '+TUT[S.tut].t,TUT[S.tut].h.replace(/<[^>]+>/g,''),'Tutorial '+(S.tut+1)+'/'+TUT.length];
+ if(!S.ents.length)return['Pilih projek pertama','Pergi ke rumah dan tekan 🏗️ Projek baru.'];
+ const E=S.ents,nm=e=>TYPES[e.t].n;let e;
+ if(e=E.find(x=>x.st!=='on'))return['Siapkan '+nm(e),'Pergi ke tapak 📘 dan tekan GUNA untuk langkah: '+TYPES[e.t].steps[e.step].t+'.'];
+ if(e=E.find(x=>x.hp<50&&stockN(x)))return['Rawat ternakan sakit 🤒','Ternakan di '+nm(e)+' sakit. Pergi Klinik Veterinar (pekan).'];
+ if(e=E.find(overdue))return['Semak '+nm(e),'Pekerja perlukan pengurus — datang atau ronda dengan basikal.'];
+ if(e=E.find(x=>x.st==='on'&&x.t!=='kebun'&&!stockN(x)))return['Beli stok '+nm(e),'Pergi ke projek, pilih stok di butang bawah.'];
+ if(E.some(x=>x.t==='kebun'&&x.st==='on'&&x.beds.some((b,k)=>k<cap(x)&&b.st!=='tanam'))&&!Object.keys(S.inv).some(k=>k.startsWith('benih_')))return['Beli benih sayur','Gerai Mak Cik Siti → 🌱 Beli benih.'];
+ if(e=E.find(x=>x.t==='kebun'&&x.st==='on'&&x.beds.some((b,k)=>k<cap(x)&&b.st!=='tanam')))return['Tanam di batas kosong','Ketuk batas tanah di kebun — watak bersihkan, gembur & semai.'];
+ if(e=E.find(needsCare))return e.t==='kebun'?['Siram batas 💧','Ketuk batas yang belum disiram.']:['Jaga '+nm(e),'Beri makan & '+TYPES[e.t].clean.toLowerCase()+' (GUNA di projek).'];
+ if(e=E.find(hasHarvest))return['Tuai / kutip hasil','Di '+nm(e)+' — tekan GUNA.'];
+ if(load(S.inv)>=BEGCAP)return['🎒 Beg penuh!','Jual di gerai Mak Cik Siti, atau simpan di kenderaan / stor rumah.'];
+ if(Object.keys(S.inv).some(k=>priceOf(k)>0)||ownedVeh().some(v=>Object.keys(vcargo(v)).length))return['Jual hasil','Gerai Mak Cik Siti (dekat), Kedai Runcit (pekan) atau Pasar Borong 85% (perlu kenderaan).'];
+ if(!ownedVeh().length&&S.money>=80)return['Beli basikal','Kedai Kenderaan di pekan — ikut 🧭 ke timur.'];
+ if(e=E.find(x=>x.st==='on'&&!isMahir(x.t)))return['Jadi Mahir: '+nm(e),skillTag(e.t)+' — '+HOWMAHIR[e.t]+'.'];
+ if(e=E.find(x=>x.st==='on'&&isMahir(x.t)&&!x.worker))return['Upah pekerja','Anda Mahir dalam '+nm(e)+'. Kedai Pertanian (pekan).'];
+ if(e=E.find(x=>x.lvl===1&&S.money>=TYPES[x.t].cost*1.5))return['Naik taraf '+nm(e),'Pergi ke projek → butang ⬆️ di bawah.'];
+ if(hour()>=18||S.min>=1440)return['Tidur','Pulang ke rumah dan tekan GUNA.'];
+ return['Semua beres! 🎉','Cuba projek baru, hias ladang (🔨), tukar baju di Butik atau pancing ikan.']}
+let last=performance.now(),hudT=0;const camPos=new THREE.Vector3(),look=new THREE.Vector3(),want=new THREE.Vector3(),wantL=new THREE.Vector3();
+function resize(){R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.fov=innerWidth<innerHeight?58:42;cam.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+if(S.ents.filter(E=>E.worker).length+(S.helper?1:0)>=2)S.bulk=true;dress();fixRaga();VEH.forEach(v=>v.g.visible=S.veh[v.id].own);S.ents.forEach((_,i)=>buildEnt(i));
+camPos.set(player.position.x+10,12,player.position.z+18);
+function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;
+ if(!modalOn&&!setup&&!build&&S.ents.length){S.min+=dt*(1440/300);if(S.min>=26*60)newDay('😵 Anda tertidur kerana terlalu lewat.')}
+ if(!modalOn)update(dt);else if(inVeh)inVeh.sp*=.9;
+ fishTick(dt);
+ if(!busy&&capT>0){capT-=dt;if(capT<=0)$('#cap').classList.add('hide')}
+ for(let i=DROPS.length-1;i>=0;i--){const d=DROPS[i];d.vy-=9*dt;d.m.position.y+=d.vy*dt;d.life-=dt;if(d.m.position.y<.1||d.life<=0){scene.remove(d.m);DROPS.splice(i,1)}}
+ for(let i=FALLS.length-1;i>=0;i--){const f=FALLS[i];f.a+=dt*2.2;f.g.rotation.z=f.dir*Math.min(Math.PI/2,f.a*f.a*.8);if(f.a>1.8){f.g.visible=false;FALLS.splice(i,1)}}
+ const p=build?{x:build.x,y:0,z:build.z}:player.position;
+ if(inVeh){const v=inVeh,f=vf(v.h),g=v.g.position,back=(v.kind==='moto'?4.6:7.2)*Math.min(1.5,Math.max(.8,zoom)),up=v.kind==='moto'?3:3.8;
+  want.set(g.x-f.x*back,up,g.z-f.z*back);wantL.set(g.x+f.x*5,1.1,g.z+f.z*5);camPos.lerp(want,Math.min(1,dt*6));look.lerp(wantL,Math.min(1,dt*10))}
+ else{const d=24*zoom;want.set(p.x+Math.sin(yaw)*Math.cos(pitch)*d,.8+Math.sin(pitch)*d,p.z+Math.cos(yaw)*Math.cos(pitch)*d);wantL.set(p.x,.9,p.z);
+  camPos.lerp(want,Math.min(1,dt*7));look.lerp(wantL,Math.min(1,dt*10))}
+ cam.position.copy(camPos);cam.lookAt(look);
+ lighting();waterT.offset.x+=dt*.02;marker.rotation.z+=dt*2;siti.userData.body.rotation.z=Math.sin(t/700)*.05;
+ VEH.forEach(v=>{if(v.load)v.load.visible=Object.keys(vcargo(v)).some(k=>WT(k)>0)});
+ rain.visible=S.weather===2;if(rain.visible){const a=rainG.attributes.position;for(let i=0;i<a.count;i++){let y=a.getY(i)-dt*18;if(y<0)y+=20;a.setY(i,y)}a.needsUpdate=true;rain.position.set(p.x,0,p.z)}
+ for(const a of WANDER){a.t-=dt;if(a.t<=0){a.tx=a.area.x0+Math.random()*(a.area.x1-a.area.x0);a.tz=a.area.z0+Math.random()*(a.area.z1-a.area.z0);a.t=2+Math.random()*4}
+  const dx=a.tx-a.m.position.x,dz=a.tz-a.m.position.z,l=Math.hypot(dx,dz);if(l>.1){a.m.position.x+=dx/l*dt*a.sp;a.m.position.z+=dz/l*dt*a.sp;a.m.rotation.y=Math.atan2(dx,dz)}}
+ V3.forEach(v=>{if(!v)return;if(v.fish)v.fish.forEach(f=>{const u=f.userData;u.ph+=dt;const s=(u.ph%4);f.visible=s<.8;f.position.set(u.x+s*.6,.3+Math.sin(s/.8*Math.PI)*.6,u.z);f.rotation.x=-Math.cos(s/.8*Math.PI)});
+  if(v.worker.visible&&!isRiver(v.E)){v.worker.position.x=4.5+Math.sin(t/2500)*2;v.worker.rotation.y=Math.cos(t/2500)>0?Math.PI/2:-Math.PI/2}
+  v.sprite.position.y=5.2+Math.sin(t/400)*.15});
+ helperNPC.visible=!!S.helper;if(S.helper){const k=S.ents.filter(E=>!isRiver(E));if(k.length){const E=k[Math.floor(t/9000)%k.length],tx=E.x+5,tz=E.z+FOOT.hd+1.5,dx=tx-helperNPC.position.x,dz=tz-helperNPC.position.z,l=Math.hypot(dx,dz);if(l>.3){helperNPC.position.x+=dx/l*Math.min(l,dt*4);helperNPC.position.z+=dz/l*Math.min(l,dt*4);helperNPC.rotation.y=Math.atan2(dx,dz)}}}
+ hudT-=dt;if(hudT<=0){hud();hudT=.12}
+ R.render(scene,cam);requestAnimationFrame(loop)}
+setInterval(save,30000);
+requestAnimationFrame(loop);
+if(!S.ents.length)setTimeout(intro,300);
+}
+</script>
+<script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))</script>
+</body>
+</html>
