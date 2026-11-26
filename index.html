@@ -45,6 +45,7 @@ body.driving #cap{font-size:13px;max-width:300px;padding:5px 10px;opacity:.9}bod
 #task .lbl{font-size:11.5px;letter-spacing:.6px;color:var(--acc);font-weight:700;display:flex;justify-content:space-between;gap:8px}#task .lbl i{font-style:normal;opacity:.8;letter-spacing:0;font-weight:500}
 #task b{display:block;font-size:16.5px;line-height:1.2}#task small{display:block;opacity:.92;font-size:13.5px;line-height:1.3;margin-top:2px}#task.tut{border-color:#ffd23f;box-shadow:0 0 0 2px rgba(255,210,63,.35)}
 #navB{padding:4px 6px 4px 12px;font-weight:700;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%}#navA{display:inline-block;font-size:22px;color:var(--acc);transition:transform .15s}#navB button{min-height:34px;min-width:34px;padding:0 8px}#task span{color:var(--acc);font-weight:700}
+#bCloud{position:relative}#bCloud .dot{position:absolute;top:3px;right:3px;width:11px;height:11px;border-radius:6px;background:#ff3d3d;box-shadow:0 0 0 2px #1b2b20;animation:igp 1s infinite alternate}#bCloud.ok .dot{background:#3ddc84;animation:none}
 #menu{position:fixed;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px}
 button{font:inherit;color:var(--ink);background:var(--panel);border:2px solid rgba(255,210,63,.45);border-radius:12px;min-height:44px;min-width:44px;padding:4px 12px;cursor:pointer;touch-action:manipulation}
 button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
@@ -144,6 +145,7 @@ body.bnr #task,body.bnr #navB,body.pnl #task{display:none}
 </div>
 <div id="menu">
  <button id="bHelp" aria-label="Bantuan">❓</button>
+ <button id="bCloud" aria-label="Simpan awan">☁️<i class="dot"></i></button>
  <button id="bFarm" aria-label="Ladang saya">📋</button>
  <button id="bBag" aria-label="Beg">🎒</button>
  <button id="bRec" aria-label="Rekod kewangan">📒</button>
@@ -1164,7 +1166,7 @@ const loadJS=u=>new Promise((ok,no)=>{const e=document.createElement('script');e
 function fbInit(){if(fbReady)return fbReady;fbReady=(async()=>{try{const B='https://www.gstatic.com/firebasejs/10.14.1/';await loadJS(B+'firebase-app-compat.js');await Promise.all([loadJS(B+'firebase-auth-compat.js'),loadJS(B+'firebase-firestore-compat.js')]);
  firebase.initializeApp(FB_CFG);fbAuth=firebase.auth();fbDb=firebase.firestore();try{await fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}catch(e){}
  try{await fbAuth.getRedirectResult()}catch(e){}
- fbAuth.onAuthStateChanged(u=>{const was=fbU;fbU=u;if(u){try{localStorage.setItem('rf_g','1')}catch(e){}cloudSync(!was)}});return true}catch(e){fbReady=null;return false}})();return fbReady}
+ fbAuth.onAuthStateChanged(u=>{const was=fbU;fbU=u;cloudBtn();if(u){try{localStorage.setItem('rf_g','1')}catch(e){}if(gateOpen){gateOpen=false;closeModal()}cloudSync(!was).then(r=>{if(r!=='modal'&&r!=='reload')runGate()})}});return true}catch(e){fbReady=null;return false}})();return fbReady}
 const hasProg=()=>S.day>1||S.ents.length>0||S.lvl>1;
 const sumTx=o=>'Hari <b>'+o.day+'</b> · <b>'+rm(o.money)+'</b> · ⭐ Tahap <b>'+(o.lvl||1)+'</b>';
 function applyCloud(c){noSave=true;try{localStorage.setItem(SAVE,c.data);localStorage.setItem('rf_inst','1')}catch(e){}toast('☁️ Memuat progress dari akaun Google…');setTimeout(()=>location.reload(),700)}
@@ -1173,11 +1175,11 @@ async function pushCloud(force){if(!fbU||!fbDb||cloudBusy)return;if(!force&&(!cl
 async function cloudSync(fresh){try{const d=await fbDb.collection('saves').doc(fbU.uid).get();
  if(!d.exists){await pushCloud(true);if(fresh)say('☁️ Log masuk sebagai <b>'+(fbU.displayName||fbU.email)+'</b>. Progress anda kini <b>disimpan di akaun Google</b> — selamat walaupun tukar telefon.',8);return}
  const c=d.data();
- if((c.ts||0)>(S.ts||0)+2000){if(!hasProg()){applyCloud(c);return}
-  modal('<h2>☁️ Pilih progress</h2><p>Akaun Google anda ada progress yang lebih baru:</p><div class="card"><h4>☁️ Akaun Google</h4><small>'+sumTx(c)+'</small></div><div class="card"><h4>📱 Telefon ini</h4><small>'+sumTx(S)+'</small></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" data-a="useCloud">☁️ Guna akaun Google</button><button data-a="useLocal">📱 Guna telefon ini</button></p>',true);window.__cloudC=c;return}
+ if((c.ts||0)>(S.ts||0)+2000){if(!hasProg()){applyCloud(c);return'reload'}
+  modal('<h2>☁️ Pilih progress</h2><p>Akaun Google anda ada progress yang lebih baru:</p><div class="card"><h4>☁️ Akaun Google</h4><small>'+sumTx(c)+'</small></div><div class="card"><h4>📱 Telefon ini</h4><small>'+sumTx(S)+'</small></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" data-a="useCloud">☁️ Guna akaun Google</button><button data-a="useLocal">📱 Guna telefon ini</button></p>',true);window.__cloudC=c;return'modal'}
  await pushCloud(true);if(fresh)toast('☁️ Progress disegerakkan dengan akaun Google')}catch(e){console.warn(e);if(fresh)say('⚠️ Tidak dapat capai simpanan awan ('+(e.code||'ralat')+'). Progress tetap disimpan dalam telefon.',8)}}
 A.useCloud=()=>{closeModal();applyCloud(window.__cloudC)};
-A.useLocal=()=>{closeModal();pushCloud(true).then(()=>toast('☁️ Progress telefon ini disimpan ke akaun Google'))};
+A.useLocal=()=>{closeModal();pushCloud(true).then(()=>toast('☁️ Progress telefon ini disimpan ke akaun Google'));runGate()};
 A.gLogin=async()=>{toast('⏳ Menyambung ke Google…');if(!(await fbInit())){say('❌ Log masuk Google tidak tersedia sekarang — pastikan ada internet, dan buka dari link GitHub (bukan pratonton Claude).',8);return}
  const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:'select_account'});
  try{await fbAuth.signInWithPopup(pv)}catch(e){const c=e.code||'';if(/popup-blocked|operation-not-supported|web-storage-unsupported/.test(c)){try{await fbAuth.signInWithRedirect(pv)}catch(e2){say('❌ Gagal log masuk: '+(e2.code||e2.message),8)}}
@@ -1186,7 +1188,19 @@ A.gLogout=async()=>{await pushCloud(true);if(fbAuth)await fbAuth.signOut();fbU=n
 A.gSync=async()=>{await pushCloud(true);toast('☁️ Disimpan ke akaun Google')};
 function gCard(){return fbU?'<div class="card"><h4>☁️ Log masuk: '+(fbU.displayName||'')+'</h4><small>'+(fbU.email||'')+' · progress disimpan automatik ke awan.</small><p style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button data-a="gSync">☁️ Simpan sekarang</button><button data-a="gLogout">Log keluar</button></p></div>'
  :'<div class="card" style="border-color:#4285f4"><h4>🔐 Simpan progress di akaun Google</h4><small>Log masuk supaya progress <b>tidak hilang</b> & boleh sambung di telefon lain.</small><p style="margin-top:6px"><button class="pri" data-a="gLogin" style="background:#fff;color:#222;border-color:#4285f4"><b style="color:#4285f4">G</b> &nbsp;Log masuk dengan Google</button></p></div>'}
-setInterval(()=>pushCloud(false),10000);document.addEventListener('visibilitychange',()=>{if(document.hidden)pushCloud(true)});
+setInterval(()=>pushCloud(false),10000);
+let gateOpen=false,gateAfter=null;
+function runGate(){const f=gateAfter;gateAfter=null;if(f)setTimeout(f,250)}
+function cloudBtn(){const b=document.getElementById('bCloud');if(b)b.classList.toggle('ok',!!fbU)}
+function loginGate(after){if(fbU){if(after)after();return}gateAfter=after||null;gateOpen=true;
+ modal('<h2>🔐 Simpan progress anda dahulu!</h2><p style="font-size:16px">Sebelum bermain, <b>log masuk dengan akaun Gmail</b> supaya progress anda <b>tidak hilang</b>.</p>'+
+  '<div class="card"><small>✅ Progress disimpan di akaun Google secara automatik<br>✅ Boleh sambung di telefon lain / selepas tukar telefon<br>✅ Tidak hilang walaupun app dipadam atau cache dibersihkan</small></div>'+
+  '<div class="card" style="border-color:#ff8a80"><small>⚠️ <b>Tanpa log masuk</b>, progress hanya disimpan dalam telefon ini — boleh <b>hilang</b> jika app dipadam, tukar telefon, atau data pelayar dibersihkan.</small></div>'+
+  '<p><button class="pri bigbtn" data-a="gLogin" style="background:#fff;color:#222;border:2px solid #4285f4;width:100%"><b style="color:#4285f4;font-size:20px">G</b> &nbsp;Log masuk dengan Gmail</button></p>'+
+  '<p style="text-align:center"><button data-a="gLater" style="opacity:.75;font-size:13px">Main dahulu tanpa simpan awan (berisiko)</button></p>',true)}
+A.gLater=()=>{gateOpen=false;closeModal();toast('⚠️ Progress hanya dalam telefon ini. Tekan ☁️ untuk log masuk.');runGate()};
+let gNag=0;setInterval(()=>{if(fbU||modalOn||inVeh||busy)return;gNag++;if(gNag%2===0)say('☁️ <b>Progress anda belum disimpan di akaun Google.</b> Tekan butang <b>☁️</b> di kanan atas untuk log masuk dengan Gmail — supaya progress tidak hilang.',8)},5*60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pushCloud(true)});
 try{if(localStorage.getItem('rf_g')==='1')fbInit()}catch(e){}
 /* ================= PASANG APP & SANDARAN PROGRESS ================= */
 const isApp=()=>{try{return matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone===true}catch(e){return false}};
@@ -1246,7 +1260,7 @@ A.bkBack=()=>{if(igP)igShow();else installGuide()};
 A.restoreUI=()=>modal('<h2>♻️ Pulihkan Progress</h2><p>Tampal kod sandaran anda di bawah. <b>Progress sekarang akan diganti.</b></p><textarea id="rsc" style="width:100%;height:110px;font-size:11px;border-radius:8px" placeholder="Tampal kod di sini"></textarea><p><button class="pri" data-a="restore">♻️ Pulihkan</button></p>');
 A.restore=()=>{const v=($('#rsc').value||'').trim();try{const j=decodeURIComponent(escape(atob(v)));const o=JSON.parse(j);if(!o||!o.veh||o.day===undefined)throw 0;noSave=true;localStorage.setItem(SAVE,j);localStorage.setItem('rf_inst','1');toast('✅ Progress dipulihkan!');setTimeout(()=>location.reload(),600)}catch(e){toast('❌ Kod tidak sah — semak semula')}};
 
-$('#bBuild').onclick=()=>{if(build)buildEnd();else buildStart()};$('#bHelp').onclick=helpModal;$('#bBag').onclick=bagModal;$('#bRec').onclick=recModal;$('#bFarm').onclick=farmModal;
+$('#bBuild').onclick=()=>{if(build)buildEnd();else buildStart()};$('#bHelp').onclick=helpModal;$('#bCloud').onclick=()=>{if(fbU)modal('<h2>☁️ Simpanan Awan</h2>'+gCard());else loginGate(null)};$('#bBag').onclick=bagModal;$('#bRec').onclick=recModal;$('#bFarm').onclick=farmModal;
 
 /* ================= MEMANCING (mini game) ================= */
 let fishS=null;
@@ -1526,8 +1540,9 @@ function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;
  R.render(scene,cam);requestAnimationFrame(loop)}
 setInterval(save,10000);
 requestAnimationFrame(loop);
-if(!hadSave)setTimeout(()=>{if(!isApp()&&!instSeen())installGuide(intro);else intro()},300);
-else{setTimeout(()=>{toast('👋 Selamat kembali! Hari '+S.day+' · '+rm(S.money));if(tutOn())tutShow();if(!isApp()&&!instSeen())installGuide(null)},600)}
+const gNever=()=>{try{return localStorage.getItem('rf_g')!=='1'}catch(e){return true}};
+if(!hadSave)setTimeout(()=>{const go=()=>gNever()?loginGate(intro):intro();if(!isApp()&&!instSeen())installGuide(go);else go()},300);
+else{setTimeout(()=>{toast('👋 Selamat kembali! Hari '+S.day+' · '+rm(S.money));if(tutOn())tutShow();const g=()=>{if(gNever())loginGate(null)};if(!isApp()&&!instSeen())installGuide(g);else g()},600)}
 save();
 }
 </script>
