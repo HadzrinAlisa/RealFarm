@@ -45,6 +45,7 @@ body.driving #cap{font-size:13px;max-width:300px;padding:5px 10px;opacity:.9}bod
 #task .lbl{font-size:11.5px;letter-spacing:.6px;color:var(--acc);font-weight:700;display:flex;justify-content:space-between;gap:8px}#task .lbl i{font-style:normal;opacity:.8;letter-spacing:0;font-weight:500}
 #task b{display:block;font-size:16.5px;line-height:1.2}#task small{display:block;opacity:.92;font-size:13.5px;line-height:1.3;margin-top:2px}#task.tut{border-color:#ffd23f;box-shadow:0 0 0 2px rgba(255,210,63,.35)}
 #navB{padding:4px 6px 4px 12px;font-weight:700;display:flex;align-items:center;gap:8px;width:max-content;max-width:100%}#navA{display:inline-block;font-size:22px;color:var(--acc);transition:transform .15s}#navB button{min-height:34px;min-width:34px;padding:0 8px}#task span{color:var(--acc);font-weight:700}
+#stat .gok{color:#7dffb0;background:rgba(61,220,132,.15);border-radius:8px;padding:0 6px}#stat .gok b{color:#7dffb0}#stat .gno{color:#ffb3a8;background:rgba(255,61,61,.18);border-radius:8px;padding:0 6px;cursor:pointer;animation:igp 1.2s infinite alternate}
 #bCloud{position:relative}#bCloud .dot{position:absolute;top:3px;right:3px;width:11px;height:11px;border-radius:6px;background:#ff3d3d;box-shadow:0 0 0 2px #1b2b20;animation:igp 1s infinite alternate}#bCloud.ok .dot{background:#3ddc84;animation:none}
 #menu{position:fixed;right:10px;top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px}
 button{font:inherit;color:var(--ink);background:var(--panel);border:2px solid rgba(255,210,63,.45);border-radius:12px;min-height:44px;min-width:44px;padding:4px 12px;cursor:pointer;touch-action:manipulation}
@@ -146,6 +147,7 @@ body.bnr #task,body.bnr #navB,body.pnl #task{display:none}
 <div id="menu">
  <button id="bHelp" aria-label="Bantuan">❓</button>
  <button id="bCloud" aria-label="Simpan awan">☁️<i class="dot"></i></button>
+ <button id="bGM" class="hide" aria-label="GM">🛠️</button>
  <button id="bFarm" aria-label="Ladang saya">📋</button>
  <button id="bBag" aria-label="Beg">🎒</button>
  <button id="bRec" aria-label="Rekod kewangan">📒</button>
@@ -1048,18 +1050,18 @@ const BALAI={x:PEKAN+44,z:PZ};const POL={on:false,t:0,fine:0,why:[]};let POLCAR=
 mark(BALAI.x,BALAI.z,'🚓');
 I.push({x:BALAI.x,z:BALAI.z+4.4,r:2.6,prim:()=>S.saman>0?{ic:'💳',l:'Bayar saman '+rm(S.saman),dis:S.money<S.saman,go:()=>{const c=S.saman;pay(-c,'Bayar saman polis');S.saman=0;save();say('👮 Saman <b>'+rm(c)+'</b> dijelaskan. Terima kasih — pandu berhemah ya!',6)}}:
  {ic:'👮',l:'Balai Polis',go:()=>say('👮 <b>Balai Polis</b> — Pandu berhemah: beri laluan kepada pejalan kaki, jaga jarak, jangan memandu laju di kawasan kampung. Langgar orang atau kenderaan = <b>dikejar polis & saman</b>. Lari dari polis = saman <b>+50%</b>.',10)}});
-function crime(why,fine){POL.why.push(why);POL.fine+=fine;if(!POL.on){POL.on=true;POL.t=0;toast('🚨 Polis mengejar anda! ('+why+')');say('🚨 <b>'+why+'</b> — Polis datang! Berhenti dan serah diri untuk saman biasa, atau lari dan saman jadi lebih mahal.',6)}else toast('🚨 '+why+' — saman bertambah')}
+function crime(why,fine){POL.why.push(why);POL.fine+=fine;if(!POL.on){POL.on=true;POL.t=0;toast('🚨 Polis mengejar anda! ('+why+')');say('🚨 <b>'+why+'</b> — Polis datang! Berhenti untuk saman biasa, atau cuba lari jauh (25 saat) — tapi jika terlepas, saman +50% dipotong esok.',6)}else toast('🚨 '+why+' — saman bertambah')}
 function polTick(dt,t){const g=POLCAR;if(!g)return;const blink=Math.floor(t/180)%2;
  if(!POL.on){g.userData.r.visible=g.userData.b.visible=true;const h=g.userData.home,dx=h[0]-g.position.x,dz=h[1]-g.position.z,l=Math.hypot(dx,dz);if(l>.5){const st=Math.min(l,14*dt);g.position.x+=dx/l*st;g.position.z+=dz/l*st;g.rotation.y=Math.atan2(dx,dz)}return}
  g.userData.r.visible=!!blink;g.userData.b.visible=!blink;POL.t+=dt;const tp=inVeh?inVeh.g.position:player.position,dx=tp.x-g.position.x,dz=tp.z-g.position.z,l=Math.hypot(dx,dz);
- if(l>90&&POL.t<1){g.position.set(tp.x-dx/l*80,0,tp.z-dz/l*80)}
- if(l<3.6){const f=POL.fine;POL.on=false;if(inVeh)inVeh.sp=0;pay(-Math.min(f,Math.max(0,S.money)),'Saman polis');if(S.money<0)S.money=0;
+ if(l>140&&POL.t<1){g.position.set(tp.x-dx/l*120,0,tp.z-dz/l*120)}
+ if(l<2.8){const f=POL.fine;POL.on=false;if(inVeh)inVeh.sp=0;pay(-Math.min(f,Math.max(0,S.money)),'Saman polis');if(S.money<0)S.money=0;
   say('👮 <b>Anda ditahan polis.</b> Kesalahan: '+POL.why.join(', ')+'. Saman <b>'+rm(f)+'</b> dibayar.<br>📗 Undang-undang jalan raya: beri laluan kepada pejalan kaki & kenderaan lain, kurangkan laju di kawasan orang ramai.',12);POL.fine=0;POL.why=[];save();return}
- if(POL.t>45){const f=Math.round(POL.fine*1.5);S.saman=(S.saman||0)+f;POL.on=false;POL.fine=0;POL.why=[];toast('🚓 Polis kehilangan jejak');say('📮 Polis hilang jejak — tetapi nombor plat anda dicatat. <b>Saman '+rm(f)+'</b> (+50%) akan dipotong esok pagi, atau bayar di Balai Polis.',10);save();return}
- const st=Math.min(l,26*dt);g.position.x+=dx/l*st;g.position.z+=dz/l*st;g.rotation.y=Math.atan2(dx,dz)}
+ if(POL.t>25||(l>70&&POL.t>8)){const f=Math.round(POL.fine*1.5);S.saman=(S.saman||0)+f;POL.on=false;POL.fine=0;POL.why=[];toast('🚓 Polis kehilangan jejak');say('📮 Polis hilang jejak — tetapi nombor plat anda dicatat. <b>Saman '+rm(f)+'</b> (+50%) akan dipotong esok pagi, atau bayar di Balai Polis.',10);save();return}
+ const st=Math.min(l,Math.min(17,6+POL.t*1.5)*dt);g.position.x+=dx/l*st;g.position.z+=dz/l*st;g.rotation.y=Math.atan2(dx,dz)}
 function npcHit(v){const sp=Math.abs(v.sp);if(sp<3)return;const g=v.g.position;
- for(const w of VILL){if(!w.n.visible||w.down>0)continue;const dx=w.n.position.x-g.x,dz=w.n.position.z-g.z;if(dx*dx+dz*dz<(v.r+.55)**2){w.down=5;w.n.rotation.x=-Math.PI/2;const l=Math.hypot(dx,dz)||1;w.n.position.x+=dx/l*1.2;w.n.position.z+=dz/l*1.2;v.sp*=.3;toast('🤕 Aduh! Anda terlanggar orang kampung');crime('Langgar pejalan kaki',300)}}
- for(const c of TRAF){if(c.hitT>0)continue;const gx=c.g.position.x,gz=c.g.position.z;if(Math.abs(g.x-gx)<(c.car?2.1:1.2)+v.r+.35&&Math.abs(g.z-gz)<(c.car?1.1:.55)+v.r+.35){c.hitT=4;c.sp=0;crime('Langgar kenderaan orang',150)}}}
+ for(const w of VILL){if(!w.n.visible||w.down>0)continue;const dx=w.n.position.x-g.x,dz=w.n.position.z-g.z;if(dx*dx+dz*dz<(v.r+.55)**2){w.down=5;w.n.rotation.x=-Math.PI/2;const l=Math.hypot(dx,dz)||1;w.n.position.x+=dx/l*1.2;w.n.position.z+=dz/l*1.2;v.sp*=.3;toast('🤕 Aduh! Anda terlanggar orang kampung');crime('Langgar pejalan kaki',50)}}
+ for(const c of TRAF){if(c.hitT>0)continue;const gx=c.g.position.x,gz=c.g.position.z;if(Math.abs(g.x-gx)<(c.car?2.1:1.2)+v.r+.35&&Math.abs(g.z-gz)<(c.car?1.1:.55)+v.r+.35){c.hitT=4;c.sp=0;crime('Langgar kenderaan orang',30)}}}
 
 /* ================= PEKERJA HIDUP (bergerak & bekerja masa nyata) ================= */
 const AG={};
@@ -1166,7 +1168,7 @@ const loadJS=u=>new Promise((ok,no)=>{const e=document.createElement('script');e
 function fbInit(){if(fbReady)return fbReady;fbReady=(async()=>{try{const B='https://www.gstatic.com/firebasejs/10.14.1/';await loadJS(B+'firebase-app-compat.js');await Promise.all([loadJS(B+'firebase-auth-compat.js'),loadJS(B+'firebase-firestore-compat.js')]);
  firebase.initializeApp(FB_CFG);fbAuth=firebase.auth();fbDb=firebase.firestore();try{await fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}catch(e){}
  try{await fbAuth.getRedirectResult()}catch(e){}
- fbAuth.onAuthStateChanged(u=>{const was=fbU;fbU=u;cloudBtn();if(u){try{localStorage.setItem('rf_g','1')}catch(e){}if(gateOpen){gateOpen=false;closeModal()}cloudSync(!was).then(r=>{if(r!=='modal'&&r!=='reload')runGate()})}});return true}catch(e){fbReady=null;return false}})();return fbReady}
+ fbAuth.onAuthStateChanged(u=>{const was=fbU;fbU=u;cloudBtn();if(u){if(!was)toast('✅ Log masuk: '+(u.displayName||u.email));try{localStorage.setItem('rf_g','1')}catch(e){}if(gateOpen){gateOpen=false;closeModal()}cloudSync(!was).then(r=>{if(r!=='reload')gmCheck();if(r!=='modal'&&r!=='reload')runGate()})}});return true}catch(e){fbReady=null;return false}})();return fbReady}
 const hasProg=()=>S.day>1||S.ents.length>0||S.lvl>1;
 const sumTx=o=>'Hari <b>'+o.day+'</b> · <b>'+rm(o.money)+'</b> · ⭐ Tahap <b>'+(o.lvl||1)+'</b>';
 function applyCloud(c){noSave=true;try{localStorage.setItem(SAVE,c.data);localStorage.setItem('rf_inst','1')}catch(e){}toast('☁️ Memuat progress dari akaun Google…');setTimeout(()=>location.reload(),700)}
@@ -1189,6 +1191,17 @@ A.gSync=async()=>{await pushCloud(true);toast('☁️ Disimpan ke akaun Google')
 function gCard(){return fbU?'<div class="card"><h4>☁️ Log masuk: '+(fbU.displayName||'')+'</h4><small>'+(fbU.email||'')+' · progress disimpan automatik ke awan.</small><p style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button data-a="gSync">☁️ Simpan sekarang</button><button data-a="gLogout">Log keluar</button></p></div>'
  :'<div class="card" style="border-color:#4285f4"><h4>🔐 Simpan progress di akaun Google</h4><small>Log masuk supaya progress <b>tidak hilang</b> & boleh sambung di telefon lain.</small><p style="margin-top:6px"><button class="pri" data-a="gLogin" style="background:#fff;color:#222;border-color:#4285f4"><b style="color:#4285f4">G</b> &nbsp;Log masuk dengan Google</button></p></div>'}
 setInterval(()=>pushCloud(false),10000);
+
+/* ================= GM (Game Master) — dikenal pasti melalui hash e-mel, bukan e-mel sebenar ================= */
+const GM_H=['8d62c0a51d635dd51d561c4f0cbb3623d4fd12dc813c7e64fe894fc3ab202f86'];let isGM=false;
+async function gmCheck(){if(!fbU||!fbU.email)return;try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(fbU.email.trim().toLowerCase()));const h=[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+ isGM=GM_H.includes(h);document.getElementById('bGM').classList.toggle('hide',!isGM);if(isGM&&!S.gmGiven){S.gmGiven=1;S.money=1000000;save();pushCloud(true);toast('🛠️ Mod GM aktif — duit ujian RM1,000,000');}}catch(e){}}
+A.gmMoney=()=>{S.money=1000000;save();pushCloud(true);toast('💰 Duit: RM1,000,000');closeModal()};
+A.gmLvl=()=>{gainXP(S.lvl*50-S.xp);closeModal()};
+A.gmDay=()=>{closeModal();newDay('🛠️ GM: lompat ke hari esok')};
+A.gmGrow=()=>{S.ents.forEach((E,i)=>{(E.beds||[]).forEach(b=>{if(b.st==='tanam'){b.g=CROPS[b.c].d;b.w=true}});if(E.batch)E.batch.age=SPECIES[E.batch.sp].d;refreshEnt(i)});save();toast('🌱 Semua tanaman & sangkar sedia dituai');closeModal()};
+A.gmNormal=()=>{S.money=500;save();pushCloud(true);toast('Duit kembali RM500');closeModal()};
+function gmPanel(){modal('<h2>🛠️ Panel GM</h2><p>Akaun: <b>'+(fbU&&fbU.email)+'</b><br><small>Hanya untuk ujian. Pemain biasa tidak nampak butang ini.</small></p><p style="display:flex;flex-direction:column;gap:8px"><button class="pri" data-a="gmMoney">💰 Set duit RM1,000,000</button><button data-a="gmLvl">⭐ Naik 1 tahap (sekarang '+S.lvl+')</button><button data-a="gmGrow">🌱 Masakkan semua tanaman / sangkar</button><button data-a="gmDay">🌅 Lompat ke hari esok</button><button data-a="gmNormal">↩ Set semula duit ke RM500</button></p>')}
 let gateOpen=false,gateAfter=null;
 function runGate(){const f=gateAfter;gateAfter=null;if(f)setTimeout(f,250)}
 function cloudBtn(){const b=document.getElementById('bCloud');if(b)b.classList.toggle('ok',!!fbU)}
@@ -1260,7 +1273,7 @@ A.bkBack=()=>{if(igP)igShow();else installGuide()};
 A.restoreUI=()=>modal('<h2>♻️ Pulihkan Progress</h2><p>Tampal kod sandaran anda di bawah. <b>Progress sekarang akan diganti.</b></p><textarea id="rsc" style="width:100%;height:110px;font-size:11px;border-radius:8px" placeholder="Tampal kod di sini"></textarea><p><button class="pri" data-a="restore">♻️ Pulihkan</button></p>');
 A.restore=()=>{const v=($('#rsc').value||'').trim();try{const j=decodeURIComponent(escape(atob(v)));const o=JSON.parse(j);if(!o||!o.veh||o.day===undefined)throw 0;noSave=true;localStorage.setItem(SAVE,j);localStorage.setItem('rf_inst','1');toast('✅ Progress dipulihkan!');setTimeout(()=>location.reload(),600)}catch(e){toast('❌ Kod tidak sah — semak semula')}};
 
-$('#bBuild').onclick=()=>{if(build)buildEnd();else buildStart()};$('#bHelp').onclick=helpModal;$('#bCloud').onclick=()=>{if(fbU)modal('<h2>☁️ Simpanan Awan</h2>'+gCard());else loginGate(null)};$('#bBag').onclick=bagModal;$('#bRec').onclick=recModal;$('#bFarm').onclick=farmModal;
+$('#bBuild').onclick=()=>{if(build)buildEnd();else buildStart()};$('#bHelp').onclick=helpModal;$('#bGM').onclick=()=>{if(isGM)gmPanel()};$('#stat').addEventListener('click',e=>{if(e.target.closest('[data-cloud]'))$('#bCloud').click()});$('#bCloud').onclick=()=>{if(fbU)modal('<h2>☁️ Simpanan Awan</h2>'+gCard());else loginGate(null)};$('#bBag').onclick=bagModal;$('#bRec').onclick=recModal;$('#bFarm').onclick=farmModal;
 
 /* ================= MEMANCING (mini game) ================= */
 let fishS=null;
@@ -1392,7 +1405,7 @@ function toggleVeh(){if(modalOn||setup||busy)return;if(inVeh){exitVeh();return}
  const v=nearVeh();if(!v){say('Tiada kenderaan berdekatan.',3);return}
  inVeh=v;target=null;pending=null;marker.visible=false;player.visible=v.kind==='moto';
  const C=vcargo(v);let moved=[];for(const k of Object.keys(S.inv)){if(!WT(k))continue;const g=fit(C,vcap(v),k,S.inv[k]);if(g>0){moved.push(g+' '+nameOf(k));put(S.inv,k,-g)}}
- say((v.kind==='moto'?'🚲 Naik basikal':'🛻 Naik pickup')+(moved.length?'. Barang beg dimuat ke kenderaan':'')+' · muatan <b>'+load(C)+'/'+vcap(v)+'</b><br>'+(v.kind==='moto'?'▲ kayuh':'▲ minyak')+' · ▼ brek/undur · ◀▶ stereng. GUNA dekat projek = semak & muat hasil.',7)}
+ say((v.id==='moto'?'🚲 Naik basikal':v.id==='motor'?'🛵 Naik motosikal':'🛻 Naik pickup')+(moved.length?'. Barang beg dimuat ke kenderaan':'')+' · muatan <b>'+load(C)+'/'+vcap(v)+'</b><br>'+(v.id==='moto'?'▲ kayuh':'▲ minyak')+' · ▼ brek/undur · ◀▶ stereng. GUNA dekat projek = semak & muat hasil.',7)}
 function exitVeh(silent){const v=inVeh;if(!v)return;const f=vf(v.h),rt={x:-f.z,z:f.x};let x=v.g.position.x+rt.x*(v.r+.9),z=v.g.position.z+rt.z*(v.r+.9);
  if(blocked(x,z,.4)){x=v.g.position.x-rt.x*(v.r+.9);z=v.g.position.z-rt.z*(v.r+.9)}
  player.position.set(x,0,z);player.rotation.set(0,v.h,0);player.visible=true;v.sp=0;inVeh=null;yaw=v.h+Math.PI;save();if(!silent)say('🚶 Turun dari '+v.name+'. Barang kekal dalam kenderaan.',4)}
@@ -1437,7 +1450,7 @@ function update(dt){
  if(inVeh){const v=inVeh,thr=inF()-inB(),st=inL()-inR();
   const dead=stranded(v);if(dead&&thr>0&&!v.dw){v.dw=1;toast(vst(v).dmg>=100?'🔧 Kenderaan rosak! Tekan GUNA untuk panggil tunda':'⛽ Minyak habis! Tekan GUNA untuk panggil tunda');setTimeout(()=>v.dw=0,4000)}
   if(thr>0&&!dead)v.sp+=v.acc*dt*(v.sp<0?2.5:1)*(vst(v).dmg>=60?.6:1);else if(thr<0)v.sp-=v.acc*dt*(v.sp>0?2.5:.7);else v.sp*=1-1.2*dt;
-  if(Math.abs(v.sp)<.05&&!thr)v.sp=0;const gp=v.g.position,road=onRoad(gp.x,gp.z),vmax=(v.id==='car'||road?v.max:v.max*.4)*(vst(v).dmg>=60?.7:1);v.sp=Math.max(-vmax*.3,Math.min(vmax,v.sp));
+  if(Math.abs(v.sp)<.05&&!thr)v.sp=0;const gp=v.g.position,road=onRoad(gp.x,gp.z),vmax=(v.id==='car'||road?v.max:v.max*(v.id==='moto'?.58:.4))*(vst(v).dmg>=60?.7:1);v.sp=Math.max(-vmax*.3,Math.min(vmax,v.sp));
   if(!road&&v.id!=='car'&&Math.abs(v.sp)>3&&!v.gw){v.gw=1;toast('🌱 Atas rumput — perlahan. Guna jalan untuk laju.');setTimeout(()=>v.gw=0,9000)}
   v.h+=st*dt*(v.kind==='moto'?2:1.6)*Math.min(1,Math.abs(v.sp)/3)*Math.sign(v.sp);
   const f=vf(v.h),nx=v.g.position.x+f.x*v.sp*dt,nz=v.g.position.z+f.z*v.sp*dt;
@@ -1455,7 +1468,7 @@ function update(dt){
  if(kf||kr){target=null;pending=null;marker.visible=false;mx=F.x*kf+Rt.x*kr;mz=F.z*kf+Rt.z*kr}
  else if(target){mx=target.x-player.position.x;mz=target.z-player.position.z;if(Math.hypot(mx,mz)<(route.length?.5:.2)){if(route.length){target=route.shift()}else{target=null;marker.visible=false;mx=mz=0;arrive()}}}
  const l=Math.hypot(mx,mz),p=player.position;
- if(l>.01){const onPath=S.decor.some(d=>d&&d.t==='batu'&&Math.abs(d.x-p.x)<1.05&&Math.abs(d.z-p.z)<1.05)||PATHS.some(b=>Math.abs(p.x-b.x)<b.w&&Math.abs(p.z-b.z)<b.d);const sp=(run?6.5:4)*(onPath?1.35:1)*dt*Math.min(1,l*4+.3)/l;mx*=sp;mz*=sp;let moved=false;
+ if(l>.01){const onPath=S.decor.some(d=>d&&d.t==='batu'&&Math.abs(d.x-p.x)<1.05&&Math.abs(d.z-p.z)<1.05)||PATHS.some(b=>Math.abs(p.x-b.x)<b.w&&Math.abs(p.z-b.z)<b.d);const sp=(run?5:4)*(onPath?1.35:1)*dt*Math.min(1,l*4+.3)/l;mx*=sp;mz*=sp;let moved=false;
   if(!blocked(p.x+mx,p.z,.35)){p.x+=mx;moved=true}if(!blocked(p.x,p.z+mz,.35)){p.z+=mz;moved=true}
   if(!moved&&target){target=null;route=[];marker.visible=false;arrive()}player.rotation.y=Math.atan2(mx,mz);walkT+=dt*(run?18:12)}else walkT=0;
  pBody.position.y=1.05+Math.abs(Math.sin(walkT))*.06;pLegs.scale.y=1-Math.abs(Math.sin(walkT))*.12}
@@ -1473,7 +1486,7 @@ function hud(){const n=nearest();
  if(n!==lastNear){lastNear=n;if(trayMode!=='nav')trayMode=''}
  tutCheck();navTick();$('#task').classList.toggle('tut',tutOn());$('#task').classList.toggle('hide',!tutOn());
  const bl=load(S.inv);let vs='';if(inVeh){const c=load(vcargo(inVeh));const o=vst(inVeh),F=FUEL[inVeh.id];vs='<span>📦 Muatan <b class="'+(c>=vcap(inVeh)?'full':'')+'">'+c+'/'+vcap(inVeh)+'</b></span>'+(F?'<span>⛽ Minyak <b class="'+(o.fuel<F.tank*.15?'full':'')+'">'+Math.round(o.fuel/F.tank*100)+'%</b></span>':'')+'<span>🔧 Ketahanan <b class="'+(o.dmg>=60?'full':'')+'">'+(100-o.dmg)+'%</b></span>'+(POL.on?'<span class="full">🚨 DIKEJAR POLIS</span>':'')}
- document.body.classList.toggle('driving',!!inVeh);$('#stat').innerHTML=inVeh?vs:'<span>Hari <b>'+S.day+'</b> · Bln '+bulan()+'</span><span>🕐 <b>'+clock()+'</b></span><span>'+WEA[S.weather].join(' ')+'</span><span>💰 <b>'+rm(S.money)+'</b></span><span>🎒 <b class="'+(bl>=BEGCAP?'full':'')+'">'+bl+'/'+BEGCAP+'</b></span><span>🪵 <b>'+S.kayu+'</b></span><span>⭐ <b>'+S.lvl+'</b></span>'+vs;
+ document.body.classList.toggle('driving',!!inVeh);$('#stat').innerHTML=inVeh?vs:(typeof fbU!=='undefined'?(fbU?'<span class="gok" data-cloud="1">☁️ <b>'+((fbU.displayName||fbU.email||'').split(' ')[0])+'</b> ✓</span>':'<span class="gno" data-cloud="1">⚠️ Belum log masuk Gmail</span>'):'')+'<span>Hari <b>'+S.day+'</b> · Bln '+bulan()+'</span><span>🕐 <b>'+clock()+'</b></span><span>'+WEA[S.weather].join(' ')+'</span><span>💰 <b>'+rm(S.money)+'</b></span><span>🎒 <b class="'+(bl>=BEGCAP?'full':'')+'">'+bl+'/'+BEGCAP+'</b></span><span>🪵 <b>'+S.kayu+'</b></span><span>⭐ <b>'+S.lvl+'</b></span>'+vs;
  {const T=task(),h='<div class="lbl">🎯 TUGAS SETERUSNYA'+(T[2]?'<i>'+T[2]+'</i>':'')+'</div><b>'+T[0]+'</b><small>'+T[1]+'</small>';if($('#taskT').innerHTML!==h)$('#taskT').innerHTML=h}
  let u=null;if(n&&!busy){if(inVeh)u=n.borong?[MKTI[n.borong].ic,'Jual di '+n.bname]:n.gud?['📦','Muat dari stor']:n.station?['⛽','Isi & repair']:['📋','Semak & muat'];else if(inVeh&&stranded(inVeh))u=['📞','Panggil tunda'];else{const p=n.prim();if(p)u=[p.ic,p.l]}}
  const key=(inVeh?'v':'')+(busy?'busy':'')+(u?u.join():'none');
@@ -1486,7 +1499,7 @@ function hud(){const n=nearest();
     '<span class="r g"><span>Jimat</span><b>+'+rmS(d.gain)+'</b></span>'+(d.lock?'<span class="buy">🔒 Tahap '+d.lock+'</span>':S.money<d.cost?'<span class="buy">Duit tak cukup</span>':'<span class="buys">'+[1,5,10].map(q=>'<span class="buy" data-q="'+q+'">+'+q+'</span>').join('')+'</span>')+'</div>'}
    return'<button data-c="'+i+'" class="'+(c.on?'pri':'')+'" '+(c.dis?'disabled':'')+'>'+c.l+'</button>'}).join('')}
  const nv=inVeh||nearVeh();const bv=$('#bVeh');bv.classList.toggle('hide',!nv||!!setup||!!busy);
- bv.textContent=inVeh?'🚶 TURUN':nv?(nv.kind==='moto'?'🚲 NAIK BASIKAL':'🛻 NAIK PICKUP'):'';
+ bv.textContent=inVeh?'🚶 TURUN':nv?(nv.id==='moto'?'🚲 NAIK BASIKAL':nv.id==='motor'?'🛵 NAIK MOTOSIKAL':'🛻 NAIK PICKUP'):'';
  $('#acts').style.display=build?'none':'';document.body.classList.toggle('bnr',!!(build||setup));$('#bRun').classList.toggle('hide',!!inVeh);$('#dpad').classList.toggle('hide',!inVeh);$('#left').classList.toggle('veh',!!inVeh)}
 function task(){if(build)return build.mode==='buang'?['Buang hiasan','Ketuk hiasan yang mahu dibuang. Anda dapat semula separuh harga.']:build.mode==='alih'?(build.moving!==undefined?['Alihkan '+DECOR[build.sel].n,'Ketuk tanah di tempat baru, ↻ putar jika perlu, kemudian ✓ Letak.']:['Pilih barang untuk dialih','Ketuk hiasan yang sudah dibina.']):['Bina hiasan','Pilih barang di bar bawah → ketuk tanah → ✓ Letak.'];
  if(setup)return['Pilih tapak '+TYPES[setup.t].n,'Ketuk tanah untuk alih kotak. Hijau = boleh. Tekan ✓ Letak, atau ✕ Batal.'];
@@ -1541,11 +1554,13 @@ function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;
 setInterval(save,10000);
 requestAnimationFrame(loop);
 const gNever=()=>{try{return localStorage.getItem('rf_g')!=='1'}catch(e){return true}};
+try{if(localStorage.getItem('rf_upd')==='1'){localStorage.removeItem('rf_upd');setTimeout(()=>toast('✨ RealFarm dikemas kini ke versi terbaru!'),1200)}}catch(e){}
 if(!hadSave)setTimeout(()=>{const go=()=>gNever()?loginGate(intro):intro();if(!isApp()&&!instSeen())installGuide(go);else go()},300);
 else{setTimeout(()=>{toast('👋 Selamat kembali! Hari '+S.day+' · '+rm(S.money));if(tutOn())tutShow();const g=()=>{if(gNever())loginGate(null)};if(!isApp()&&!instSeen())installGuide(g);else g()},600)}
 save();
 }
 </script>
-<script>if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))</script>
+<script>if("serviceWorker" in navigator){let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(rl)return;rl=true;try{localStorage.setItem("rf_upd","1")}catch(e){}location.reload()});
+addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update();document.addEventListener("visibilitychange",()=>{if(!document.hidden)r.update()});setInterval(()=>r.update(),30*60*1000)}).catch(()=>{}))}</script>
 </body>
 </html>
