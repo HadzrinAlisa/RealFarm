@@ -297,7 +297,7 @@ const fresh=()=>({jimat:0,day:1,min:7*60,money:500,weather:0,inv:{benih_kangkung
 let S=fresh();let hadSave=false;
 try{const t=localStorage.getItem(SAVE);hadSave=!!t;if(t){const o=JSON.parse(t);S=Object.assign(fresh(),o);if(o.tut===undefined)S.tut=99}}catch(e){}
 S.beg=Math.min(BEGS.length-1,S.beg||0);BEGCAP=BEGS[S.beg].cap;
-let noSave=false,lastSaveStr='',bootSave=true,cloudDirty=false;const save=()=>{if(noSave)return;VEH.forEach(v=>{S.veh[v.id].pos=[v.g.position.x,v.g.position.z,v.h]});const ts=S.ts;S.ts=0;const str=JSON.stringify(S);S.ts=ts;if(str!==lastSaveStr){if(lastSaveStr&&!bootSave){S.ts=Date.now();cloudDirty=true}lastSaveStr=str}bootSave=false;try{localStorage.setItem(SAVE,JSON.stringify(S))}catch(e){}};
+let noSave=false,lastSaveStr='',bootSave=true,cloudDirty=false;const save=()=>{if(noSave)return;VEH.forEach(v=>{S.veh[v.id].pos=[v.g.position.x,v.g.position.z,v.h]});const ts=S.ts;S.ts=0;const str=JSON.stringify(S);S.ts=ts;if(str!==lastSaveStr){if(lastSaveStr&&!bootSave){S.ts=Date.now();cloudDirty=true}lastSaveStr=str}bootSave=false;if(/github\.io$/.test(location.hostname)&&!window.__fbIn)return;try{localStorage.setItem(SAVE,JSON.stringify(S))}catch(e){}};
 const put=(o,k,n)=>{o[k]=Math.round(((o[k]||0)+n)*10)/10;if(o[k]<=0)delete o[k]};
 /* masukkan sebanyak muat; pulangkan kuantiti yang masuk */
 const fit=(o,cap,k,n)=>{const w=WT(k);if(!w){put(o,k,n);return n}let q=Math.min(n,Math.floor((cap-load(o))/w*10)/10);if(k==='telur'||k.startsWith('ikan_'))q=Math.floor(q);q=Math.max(0,q);if(q>0)put(o,k,q);return q};
@@ -1163,30 +1163,36 @@ A.reset=()=>{noSave=true;try{localStorage.removeItem(SAVE)}catch(e){}location.re
 
 /* ================= LOG MASUK GOOGLE & SIMPANAN AWAN (Firebase) ================= */
 const FB_CFG={apiKey:"AIzaSyBaH3J4ASCSHOQXckMCFzERmc8-9CqkPBw",authDomain:"realfarm-bcd89.firebaseapp.com",projectId:"realfarm-bcd89",storageBucket:"realfarm-bcd89.firebasestorage.app",messagingSenderId:"628643655816",appId:"1:628643655816:web:846131b7cbbf10b2a16f3d"};
-let fbU=null,fbAuth=null,fbDb=null,fbReady=null,cloudT=0,cloudBusy=false;
+let fbU=null,fbAuth=null,fbDb=null,fbReady=null,cloudT=0,cloudBusy=false,authOk;const authReady=new Promise(r=>authOk=r);
+const LOGIN_REQ=/github\.io$/.test(location.hostname);
 const loadJS=u=>new Promise((ok,no)=>{const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=no;document.head.appendChild(e)});
 function fbInit(){if(fbReady)return fbReady;fbReady=(async()=>{try{const B='https://www.gstatic.com/firebasejs/10.14.1/';await loadJS(B+'firebase-app-compat.js');await Promise.all([loadJS(B+'firebase-auth-compat.js'),loadJS(B+'firebase-firestore-compat.js')]);
  firebase.initializeApp(FB_CFG);fbAuth=firebase.auth();fbDb=firebase.firestore();try{await fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}catch(e){}
  try{await fbAuth.getRedirectResult()}catch(e){}
- fbAuth.onAuthStateChanged(u=>{const was=fbU;fbU=u;cloudBtn();if(u){if(!was)toast('✅ Log masuk: '+(u.displayName||u.email));try{localStorage.setItem('rf_g','1')}catch(e){}if(gateOpen){gateOpen=false;closeModal()}cloudSync(!was).then(r=>{if(r!=='reload')gmCheck();if(r!=='modal'&&r!=='reload')runGate()})}});return true}catch(e){fbReady=null;return false}})();return fbReady}
+ fbAuth.onAuthStateChanged(u=>{authOk(u);window.__fbIn=!!u;const was=fbU;fbU=u;cloudBtn();if(u){if(!was)toast('✅ Log masuk: '+(u.displayName||u.email));let first=true;try{first=localStorage.getItem('rf_g')!=='1';localStorage.setItem('rf_g','1')}catch(e){}if(gateOpen){gateOpen=false;closeModal()}cloudSync(!was,first).then(r=>{if(r!=='reload')gmCheck();if(r!=='modal'&&r!=='reload')runGate()})}});return true}catch(e){fbReady=null;return false}})();return fbReady}
 const hasProg=()=>S.day>1||S.ents.length>0||S.lvl>1;
 const sumTx=o=>'Hari <b>'+o.day+'</b> · <b>'+rm(o.money)+'</b> · ⭐ Tahap <b>'+(o.lvl||1)+'</b>';
 function applyCloud(c){noSave=true;try{localStorage.setItem(SAVE,c.data);localStorage.setItem('rf_inst','1')}catch(e){}toast('☁️ Memuat progress dari akaun Google…');setTimeout(()=>location.reload(),700)}
 async function pushCloud(force){if(!fbU||!fbDb||cloudBusy)return;if(!force&&(!cloudDirty||Date.now()-cloudT<30000))return;cloudBusy=true;try{save();
  await fbDb.collection('saves').doc(fbU.uid).set({data:JSON.stringify(S),ts:S.ts||Date.now(),day:S.day,money:S.money,lvl:S.lvl,name:fbU.displayName||'',updated:firebase.firestore.FieldValue.serverTimestamp()});cloudT=Date.now();cloudDirty=false}catch(e){console.warn(e)}cloudBusy=false}
-async function cloudSync(fresh){try{const d=await fbDb.collection('saves').doc(fbU.uid).get();
+const progScore=o=>(o.lvl||1)*100000+(o.xp||0)*10+(o.day||1)*50+((o.ents&&o.ents.length)||0)*500;
+async function cloudSync(fresh,first){try{const d=await fbDb.collection('saves').doc(fbU.uid).get();
  if(!d.exists){await pushCloud(true);if(fresh)say('☁️ Log masuk sebagai <b>'+(fbU.displayName||fbU.email)+'</b>. Progress anda kini <b>disimpan di akaun Google</b> — selamat walaupun tukar telefon.',8);return}
  const c=d.data();
  if((c.ts||0)>(S.ts||0)+2000){if(!hasProg()){applyCloud(c);return'reload'}
-  modal('<h2>☁️ Pilih progress</h2><p>Akaun Google anda ada progress yang lebih baru:</p><div class="card"><h4>☁️ Akaun Google</h4><small>'+sumTx(c)+'</small></div><div class="card"><h4>📱 Telefon ini</h4><small>'+sumTx(S)+'</small></div><p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" data-a="useCloud">☁️ Guna akaun Google</button><button data-a="useLocal">📱 Guna telefon ini</button></p>',true);window.__cloudC=c;return'modal'}
+  let cs=null;try{cs=JSON.parse(c.data)}catch(e){}
+  if(first&&cs&&progScore(S)>progScore(cs)){await pushCloud(true);say('☁️ Progress <b>peranti ini</b> ('+sumTx(S)+') lebih jauh — kini disimpan ke akaun <b>'+fbU.email+'</b>. Buka di mana-mana dengan e-mel ini untuk sambung.',10);return}
+  applyCloud(c);return'reload'}
+ let cs=null;try{cs=JSON.parse(c.data)}catch(e){}
+ if(first&&cs&&progScore(cs)>progScore(S)){applyCloud(c);return'reload'}
  await pushCloud(true);if(fresh)toast('☁️ Progress disegerakkan dengan akaun Google')}catch(e){console.warn(e);if(fresh)say('⚠️ Tidak dapat capai simpanan awan ('+(e.code||'ralat')+'). Progress tetap disimpan dalam telefon.',8)}}
 A.useCloud=()=>{closeModal();applyCloud(window.__cloudC)};
 A.useLocal=()=>{closeModal();pushCloud(true).then(()=>toast('☁️ Progress telefon ini disimpan ke akaun Google'));runGate()};
-A.gLogin=async()=>{toast('⏳ Menyambung ke Google…');if(!(await fbInit())){say('❌ Log masuk Google tidak tersedia sekarang — pastikan ada internet, dan buka dari link GitHub (bukan pratonton Claude).',8);return}
+A.gLogin=async()=>{toast('⏳ Menyambung ke Google…');if(!(await fbInit())){if(gateOpen)loginGate(undefined,'Tidak dapat menyambung ke Google — semak internet anda dan cuba lagi.');else say('❌ Log masuk Google tidak tersedia sekarang — pastikan ada internet.',8);return}
  const pv=new firebase.auth.GoogleAuthProvider();pv.setCustomParameters({prompt:'select_account'});
  try{await fbAuth.signInWithPopup(pv)}catch(e){const c=e.code||'';if(/popup-blocked|operation-not-supported|web-storage-unsupported/.test(c)){try{await fbAuth.signInWithRedirect(pv)}catch(e2){say('❌ Gagal log masuk: '+(e2.code||e2.message),8)}}
-  else if(!/popup-closed|cancelled-popup/.test(c))say('❌ Gagal log masuk: '+c+(c==='auth/unauthorized-domain'?' — domain belum dibenarkan dalam Firebase.':''),10)}};
-A.gLogout=async()=>{await pushCloud(true);if(fbAuth)await fbAuth.signOut();fbU=null;try{localStorage.removeItem('rf_g')}catch(e){}closeModal();toast('👋 Log keluar. Progress kekal dalam telefon ini.')};
+  else if(!/popup-closed|cancelled-popup/.test(c)){const m='Gagal log masuk: '+c+(c==='auth/unauthorized-domain'?' — domain belum dibenarkan dalam Firebase.':'');if(gateOpen)loginGate(undefined,m);else say('❌ '+m,10)}}};
+A.gLogout=async()=>{await pushCloud(true);if(fbAuth)await fbAuth.signOut();fbU=null;noSave=true;try{localStorage.removeItem('rf_g');localStorage.removeItem(SAVE)}catch(e){}toast('👋 Log keluar. Progress selamat di akaun Gmail anda.');setTimeout(()=>location.reload(),900)};
 A.gSync=async()=>{await pushCloud(true);toast('☁️ Disimpan ke akaun Google')};
 function gCard(){return fbU?'<div class="card"><h4>☁️ Log masuk: '+(fbU.displayName||'')+'</h4><small>'+(fbU.email||'')+' · progress disimpan automatik ke awan.</small><p style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button data-a="gSync">☁️ Simpan sekarang</button><button data-a="gLogout">Log keluar</button></p></div>'
  :'<div class="card" style="border-color:#4285f4"><h4>🔐 Simpan progress di akaun Google</h4><small>Log masuk supaya progress <b>tidak hilang</b> & boleh sambung di telefon lain.</small><p style="margin-top:6px"><button class="pri" data-a="gLogin" style="background:#fff;color:#222;border-color:#4285f4"><b style="color:#4285f4">G</b> &nbsp;Log masuk dengan Google</button></p></div>'}
@@ -1205,14 +1211,18 @@ function gmPanel(){modal('<h2>🛠️ Panel GM</h2><p>Akaun: <b>'+(fbU&&fbU.emai
 let gateOpen=false,gateAfter=null;
 function runGate(){const f=gateAfter;gateAfter=null;if(f)setTimeout(f,250)}
 function cloudBtn(){const b=document.getElementById('bCloud');if(b)b.classList.toggle('ok',!!fbU)}
-function loginGate(after){if(fbU){if(after)after();return}gateAfter=after||null;gateOpen=true;
- modal('<h2>🔐 Simpan progress anda dahulu!</h2><p style="font-size:16px">Sebelum bermain, <b>log masuk dengan akaun Gmail</b> supaya progress anda <b>tidak hilang</b>.</p>'+
-  '<div class="card"><small>✅ Progress disimpan di akaun Google secara automatik<br>✅ Boleh sambung di telefon lain / selepas tukar telefon<br>✅ Tidak hilang walaupun app dipadam atau cache dibersihkan</small></div>'+
-  '<div class="card" style="border-color:#ff8a80"><small>⚠️ <b>Tanpa log masuk</b>, progress hanya disimpan dalam telefon ini — boleh <b>hilang</b> jika app dipadam, tukar telefon, atau data pelayar dibersihkan.</small></div>'+
+function loginGate(after,err){if(fbU){if(after)after();return}if(after!==undefined)gateAfter=after||null;gateOpen=true;
+ modal('<h2>🔐 Log masuk untuk bermain</h2><p style="font-size:16px">RealFarm menyimpan progress anda di <b>akaun Gmail</b>. Log masuk dahulu untuk mula atau sambung bermain.</p>'+
+  '<div class="card"><small>✅ 1 e-mel = 1 progress — sama di telefon, tablet & laptop<br>✅ Tidak hilang walaupun app dipadam atau tukar telefon<br>✅ Disimpan automatik</small></div>'+
+  (err?'<div class="card" style="border-color:#ff8a80"><small>⚠️ '+err+'</small></div>':'')+
   '<p><button class="pri bigbtn" data-a="gLogin" style="background:#fff;color:#222;border:2px solid #4285f4;width:100%"><b style="color:#4285f4;font-size:20px">G</b> &nbsp;Log masuk dengan Gmail</button></p>'+
-  '<p style="text-align:center"><button data-a="gLater" style="opacity:.75;font-size:13px">Main dahulu tanpa simpan awan (berisiko)</button></p>',true)}
-A.gLater=()=>{gateOpen=false;closeModal();toast('⚠️ Progress hanya dalam telefon ini. Tekan ☁️ untuk log masuk.');runGate()};
-let gNag=0;setInterval(()=>{if(fbU||modalOn||inVeh||busy)return;gNag++;if(gNag%2===0)say('☁️ <b>Progress anda belum disimpan di akaun Google.</b> Tekan butang <b>☁️</b> di kanan atas untuk log masuk dengan Gmail — supaya progress tidak hilang.',8)},5*60*1000);
+  (LOGIN_REQ?'':'<p style="text-align:center"><button data-a="gLater" style="opacity:.75;font-size:13px">Mod ujian (pratonton sahaja)</button></p>'),true)}
+A.gLater=()=>{if(LOGIN_REQ)return;gateOpen=false;closeModal();runGate()};
+function requireLogin(after){if(!LOGIN_REQ&&!(()=>{try{return localStorage.getItem('rf_g')==='1'}catch(e){return false}})()){loginGate(after);return}
+ gateAfter=after||null;gateOpen=true;modal('<h2>⏳ Menyambung akaun…</h2><p>Sila tunggu sebentar.</p>',true);
+ fbInit().then(ok=>{if(!ok){loginGate(undefined,'Tiada sambungan internet. Sambungkan internet, kemudian tekan Log masuk.');return}
+  Promise.race([authReady,new Promise(r=>setTimeout(()=>r(undefined),8000))]).then(u=>{if(fbU)return;loginGate(undefined)})})}
+let gNag=0;setInterval(()=>{if(LOGIN_REQ||fbU||modalOn||inVeh||busy)return;gNag++;if(gNag%2===0)say('☁️ <b>Progress anda belum disimpan di akaun Google.</b> Tekan butang <b>☁️</b> di kanan atas untuk log masuk dengan Gmail — supaya progress tidak hilang.',8)},5*60*1000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pushCloud(true)});
 try{if(localStorage.getItem('rf_g')==='1')fbInit()}catch(e){}
 /* ================= PASANG APP & SANDARAN PROGRESS ================= */
@@ -1555,8 +1565,8 @@ setInterval(save,10000);
 requestAnimationFrame(loop);
 const gNever=()=>{try{return localStorage.getItem('rf_g')!=='1'}catch(e){return true}};
 try{if(localStorage.getItem('rf_upd')==='1'){localStorage.removeItem('rf_upd');setTimeout(()=>toast('✨ RealFarm dikemas kini ke versi terbaru!'),1200)}}catch(e){}
-if(!hadSave)setTimeout(()=>{const go=()=>gNever()?loginGate(intro):intro();if(!isApp()&&!instSeen())installGuide(go);else go()},300);
-else{setTimeout(()=>{toast('👋 Selamat kembali! Hari '+S.day+' · '+rm(S.money));if(tutOn())tutShow();const g=()=>{if(gNever())loginGate(null)};if(!isApp()&&!instSeen())installGuide(g);else g()},600)}
+if(!hadSave)setTimeout(()=>{const go=()=>requireLogin(intro);if(!isApp()&&!instSeen())installGuide(go);else go()},300);
+else{setTimeout(()=>{toast('👋 Selamat kembali! Hari '+S.day+' · '+rm(S.money));if(tutOn())tutShow();const g=()=>requireLogin(null);if(!isApp()&&!instSeen())installGuide(g);else g()},600)}
 save();
 }
 </script>
